@@ -411,13 +411,58 @@ function parseLooseDate(s) {
 }
 
 /**
+ * 解码 git 的八进制转义路径。
+ * git 默认对非 ASCII 路径做 quotepath 转义，例如：
+ *   "prd/\346\200\273\346\241\243\346\200\272\346\226\207\346\241\243.md"
+ * 需要还原成真实的中文文件名，否则「最常改的文件」全是乱码。
+ * 逐字节解码，支持多字节 UTF-8。
+ */
+function decodeOctalPath(s) {
+  if (!/\\[0-7]{3}/.test(s)) return s;
+  var bytes = [];
+  var i = 0;
+  while (i < s.length) {
+    if (s.charAt(i) === '\\' && i + 3 < s.length && /^[0-7]{3}$/.test(s.substr(i + 1, 3))) {
+      bytes.push(parseInt(s.substr(i + 1, 3), 8));
+      i += 4;
+    } else {
+      /* 非转义字符按 UTF-8 字节展开 */
+      var cp = s.codePointAt(i);
+      var ch = String.fromCodePoint(cp);
+      if (cp < 0x80) {
+        bytes.push(cp);
+      } else if (cp < 0x800) {
+        bytes.push(0xC0 | (cp >> 6), 0x80 | (cp & 0x3F));
+      } else if (cp < 0x10000) {
+        bytes.push(0xE0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F));
+      } else {
+        bytes.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F));
+      }
+      i += ch.length;
+    }
+  }
+  try {
+    if (typeof TextDecoder === 'undefined') return s;
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+  } catch (e) {
+    return s;
+  }
+}
+
+/**
  * 归一化 numstat 路径。
- * 处理两种重命名格式：
+ * 处理三种情况：
  *   "src/{old => new}/a.js"  →  "src/new/a.js"   （保留花括号外的父目录）
  *   "old.js => new.js"       →  "new.js"
+ *   八进制转义路径            →  解码为真实中文路径
  */
 function normalizePath(p) {
   var s = String(p || '').trim();
+  /* git 会给转义路径加引号，先剥掉 */
+  if (s.length >= 2 && s.charAt(0) === '"' && s.charAt(s.length - 1) === '"') {
+    s = s.slice(1, -1);
+  }
+  s = decodeOctalPath(s);
   /* 形式一：花括号包裹，取 { } 内 => 右侧，再拼回括号前后的部分 */
   var braced = /\{([^{}]*?)\s*=>\s*([^{}]*?)\}/.exec(s);
   if (braced) {
@@ -437,6 +482,63 @@ function newRec(hash, date, author, subject) {
 }
 
 /**
+ * 输入预处理：修正编码问题。
+ * Windows 下用 `git log > out.txt` 重定向，PowerShell 5.1 会写成 UTF-16LE，
+ * 粘进输入框会满屏乱码。这里检测并转换回正常文本。
+ * 处理：
+ *   1. UTF-16LE BOM (FF FE) / UTF-16BE BOM (FE FF)
+ *   2. 无 BOM 但正文含大量 NUL 字节的 UTF-16
+ *   3. UTF-8 BOM
+ */
+function normalizeInputText(text) {
+  var s = String(text || '');
+  if (!s) return s;
+
+  /* UTF-8 BOM：直接去掉 */
+  if (s.charCodeAt(0) === 0xFEFF) return s.slice(1);
+
+  /* UTF-16 BOM */
+  if (s.charCodeAt(0) === 0xFF && s.charCodeAt(1) === 0xFE) {
+    return utf16ToString(s.slice(2), true);
+  }
+  if (s.charCodeAt(0) === 0xFE && s.charCodeAt(1) === 0xFF) {
+    return utf16ToString(s.slice(2), false);
+  }
+
+  /* 无 BOM 的 UTF-16：正文里出现 NUL 字节 */
+  var probe = s.slice(0, Math.min(s.length, 2000));
+  var nul = 0;
+  for (var i = 0; i < probe.length; i++) if (probe.charCodeAt(i) === 0) nul++;
+  if (nul > 3 && nul * 6 > probe.length) {
+    return utf16ToString(s, true);
+  }
+  return s;
+}
+
+/** UTF-16 码元数组转字符串 */
+function utf16ToString(s, littleEndian) {
+  var out = '';
+  for (var i = 0; i < s.length; i += 2) {
+    var c = s.charCodeAt(i);
+    var d = i + 1 < s.length ? s.charCodeAt(i + 1) : 0;
+    var code = littleEndian ? (d << 8) | c : (c << 8) | d;
+    if (!code) continue;
+    if (code >= 0xD800 && code <= 0xDBFF && i + 3 < s.length) {
+      /* 代理对 */
+      var c2 = s.charCodeAt(i + 2), d2 = s.charCode(i + 3);
+      var lo = littleEndian ? (d2 << 8) | c2 : (c2 << 8) | d2;
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        out += String.fromCharCode(code, lo);
+        i += 2;
+        continue;
+      }
+    }
+    out += String.fromCharCode(code);
+  }
+  return out;
+}
+
+/**
  * 解析 git log 文本。
  * 支持：自定义 format（三种时间精度）、git 默认格式、--oneline、--numstat、续行、CRLF。
  * 返回 { records, truncated }
@@ -444,7 +546,7 @@ function newRec(hash, date, author, subject) {
 function parseGitLog(text) {
   var out = { records: [], truncated: false };
   if (!text) return out;
-  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var lines = normalizeInputText(text).replace(/\r\n?/g, '\n').split('\n');
   var records = out.records;
   var last = null;
 
@@ -1613,6 +1715,59 @@ function runSelfTest() {
   t('解析：重命名归一化 old => new', function () {
     var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|refactor: move\n1\t1\tsrc/{old => new}/a.js');
     eq(r.records[0].files[0], 'src/new/a.js');
+    return true;
+  });
+  t('解析：八进制转义路径还原为中文', function () {
+    /* git quotepath 默认会把中文路径转义。真实例子（git log --numstat 原文）：
+       "prd/\346\200\273\351\234\200\346\261\202\346\226\207\346\241\243.md"
+       → "prd/总需求文档.md" */
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|feat: x\n938\t0\t"prd/\\346\\200\\273\\351\\234\\200\\346\\261\\202\\346\\226\\207\\346\\241\\243.md"');
+    eq(r.records[0].files[0], 'prd/总需求文档.md');
+    return true;
+  });
+  t('解析：八进制转义且无引号也能还原', function () {
+    /* 测：E8 AF 95 = \350 \257 \225 */
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|feat: x\n1\t0\tsrc/\\346\\265\\213\\350\\257\\225.js');
+    eq(r.records[0].files[0], 'src/测试.js');
+    return true;
+  });
+  t('解析：普通路径不被误解码', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|feat: x\n1\t0\tsrc/index.js');
+    eq(r.records[0].files[0], 'src/index.js');
+    return true;
+  });
+  t('解析：UTF-16LE 输入被还原（Windows 重定向）', function () {
+    /* PowerShell 5.1 的 `git log > out.txt` 写的是 UTF-16LE，粘进来是乱码。
+       文件头两个字节 FF FE 被读成两个码元 0xFF / 0xFE。 */
+    var s = 'a1b2c3d|2026-10-20 10:00:00|张三|feat: 中文提交\n1\t0\tsrc/a.js';
+    var u16 = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      u16 += String.fromCharCode(c & 0xFF, (c >> 8) & 0xFF);
+    }
+    var r = parseGitLog(String.fromCharCode(0xFF, 0xFE) + u16);
+    eq(r.records.length, 1);
+    eq(r.records[0].author, '张三');
+    eq(r.records[0].subject, 'feat: 中文提交');
+    eq(r.records[0].files[0], 'src/a.js');
+    return true;
+  });
+  t('解析：UTF-8 BOM 被去掉', function () {
+    var r = parseGitLog('﻿a1b2c3d|2026-10-20 10:00:00|Alice|feat: x');
+    eq(r.records.length, 1);
+    eq(r.records[0].hash, 'a1b2c3d');
+    return true;
+  });
+  t('解析：无 BOM 的 UTF-16 也能识别', function () {
+    var s = 'a1b2c3d|2026-10-20 10:00:00|Alice|feat: x';
+    var u16 = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      u16 += String.fromCharCode(c & 0xFF, (c >> 8) & 0xFF);
+    }
+    var r = parseGitLog(u16);
+    eq(r.records.length, 1);
+    eq(r.records[0].subject, 'feat: x');
     return true;
   });
   t('解析：CRLF 换行', function () {

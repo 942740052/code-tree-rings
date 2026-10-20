@@ -42,6 +42,7 @@ const sandbox = {
   console, setTimeout, clearTimeout, Date, Math, JSON, Object, Array,
   String, Number, Boolean, RegExp, Error, Promise, isNaN, parseInt, parseFloat,
   encodeURIComponent, decodeURIComponent,
+  TextDecoder: TextDecoder, Uint8Array: Uint8Array,
   document: {
     readyState: 'complete', getElementById: $,
     createElement(tag) {
@@ -62,7 +63,9 @@ vm.createContext(sandbox);
 vm.runInContext(code, sandbox, { filename: 'index.html' });
 const S = sandbox.__CTR__;
 
-const txt = fs.readFileSync(path.join(__dirname, 'my-gitlog.txt'), 'utf8');
+/* my-gitlog.txt 可能是 UTF-8 或 UTF-16（Windows 重定向），按 BOM 自动判断 */
+const raw = fs.readFileSync(path.join(__dirname, 'my-gitlog.txt'));
+const txt = (raw[0] === 0xFF && raw[1] === 0xFE) ? raw.toString('utf16le') : raw.toString('utf8');
 const r = S.parseGitLog(txt);
 const st = S.computeStats(r.records);
 const dg = S.diagnoseRecords(r.records);
@@ -86,10 +89,19 @@ console.log('病种        :', dg.hits.map(h => h.name + '×' + h.c).join('  '))
 console.log('');
 console.log('=== Top 文件 ===');
 st.files.slice(0, 8).forEach(f => console.log('  ' + String(f.c).padStart(4) + '  ' + f.p));
+/* 注意：S.files 只保留 Top 5，中文路径要从全部记录里找 */
+const allFiles = [];
+r.records.forEach(x => x.files.forEach(f => allFiles.push(f)));
+const zh = [...new Set(allFiles.filter(f => /[一-龥]/.test(f)))];
+console.log('');
+console.log('中文路径文件 :', zh.length, '个');
+zh.slice(0, 4).forEach(f => console.log('        ' + f));
 console.log('');
 console.log('=== 提交列表 ===');
 r.records.forEach(x => console.log('  ' + x.hash + '  ' + x.date.toLocaleString('zh-CN') + '  ' + x.subject.slice(0, 40)));
 console.log('');
-const ok = st.count === 3 && st.dated === 3 && st.added > 0 && st.fileTouched > 0;
-console.log(ok ? '✓ 真实数据解析正常' : '✗ 解析异常');
+/* 判定：提交数与输入里的提交头数一致、有日期、有行数、有文件 */
+const heads = (txt.replace(/^﻿/, '').match(/^[0-9a-f]{7,40}\|/gm) || []).length;
+const ok = st.count === heads && st.dated === heads && st.added > 0 && st.fileTouched > 0;
+console.log(ok ? '✓ 真实数据解析正常' : '✗ 解析异常（提交头 ' + heads + '，解析出 ' + st.count + '）');
 process.exit(ok ? 0 : 1);

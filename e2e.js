@@ -1,4 +1,4 @@
-﻿/* 代码年轮 · 端到端验证
+/* 代码年轮 · 端到端验证
  * 用三种真实 git log 输出格式各跑一遍完整链路，验证解析→统计→病历→导出。
  * 直接 node e2e.js 运行。
  */
@@ -46,6 +46,7 @@ const sandbox = {
   console, setTimeout, clearTimeout, Date, Math, JSON, Object, Array,
   String, Number, Boolean, RegExp, Error, Promise, isNaN, parseInt, parseFloat,
   encodeURIComponent, decodeURIComponent,
+  TextDecoder: TextDecoder, Uint8Array: Uint8Array,
   document: {
     readyState: 'complete',
     getElementById: $,

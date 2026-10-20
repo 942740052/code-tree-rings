@@ -65,6 +65,7 @@ const sandbox = {
   Error: Error, Promise: Promise, isNaN: isNaN, parseInt: parseInt,
   parseFloat: parseFloat, encodeURIComponent: encodeURIComponent,
   decodeURIComponent: decodeURIComponent,
+  TextDecoder: TextDecoder, Uint8Array: Uint8Array,
   document: {
     readyState: 'complete',
     getElementById: $,
