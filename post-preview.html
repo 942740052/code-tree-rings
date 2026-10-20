@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>发帖预览</title>
+<style>
+body{margin:0;background:#F7F7F7;font:15px/1.75 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#222;display:flex;justify-content:center}
+.wrap{width:1000px;background:#fff;padding:26px 34px 60px;box-shadow:0 0 0 1px #e3e3e3;margin:20px 0}
+h1{font-size:25px;margin:0 0 18px}
+h2{font-size:19px;margin:32px 0 12px;padding-bottom:7px;border-bottom:1px solid #e6e6e6}
+p{margin:0 0 14px}
+img{max-width:100%;border-radius:8px;display:block;margin:6px 0 18px;border:1px solid #eee}
+code{background:#f4f4f4;padding:2px 6px;border-radius:4px;font:13px Consolas,monospace;color:#c7254e}
+pre{background:#f4f4f4;padding:14px 16px;border-radius:8px;overflow-x:auto;font:13px/1.6 Consolas,monospace}
+pre code{background:none;padding:0;color:#333}
+blockquote{border-left:3px solid #ddd;margin:0 0 14px;padding:2px 0 2px 16px;color:#555}
+ul,ol{padding-left:26px;margin:0 0 14px}
+li{margin-bottom:5px}
+table{border-collapse:collapse;margin:0 0 16px;width:100%}
+th,td{border:1px solid #ddd;padding:7px 11px;text-align:left}
+th{background:#f6f6f6}
+a{color:#1758a0}
+hr{border:0;border-top:1px solid #e6e6e6;margin:28px 0}
+</style></head><body><div class="wrap">
+<p><strong>一句话：把 <code>git log</code> 变成一张 1024 年度海报——24 小时提交钟面、星期分布、段位徽章，外加一份给 commit message 开的「病历本」。纯前端、零依赖、双击即开、离线可用，数据全程不离开你的浏览器。</strong></p>
+<p>在线体验：<a href="https://942740052.github.io/code-tree-rings/">代码年轮 · Code Tree Rings</a> 源码：<a href="https://github.com/942740052/code-tree-rings">github.com/942740052/code-tree-rings</a></p>
+<p><img alt="代码年轮海报 - 终端绿" src="https://942740052.github.io/code-tree-rings/posters/poster-terminal.png"></p>
+<h2>这到底是什么</h2>
+<p>一个纯前端网页。粘贴一段 <code>git log</code> 输出，它在<strong>你本地</strong>解析，然后画出一张可以收藏、可以发群的年度海报。</p>
+<p>它不是一张静态图，是能点的：</p>
+<ul><li><strong>24 小时提交钟面</strong> —— 圆环上每一根刺是一个小时，越长提交越多，峰值小时高亮</li><li><strong>星期分布</strong> —— 一周里哪天最能写，周末单独配色</li><li><strong>段位徽章</strong> —— 2⁰ → 2¹⁰ 共 11 级，从「Hello, World」一路到「2¹⁰ · 满级 Builder」</li><li><strong>Builder 指数</strong> —— 0–100 的健康度综合分：活跃度 / 连续性 / 作息 / 命名，四维加权</li><li><strong>commit message 病历本</strong> —— 敷衍指数、病情分级、病种构成，以及「最该被枪毙的那条」</li><li><strong>导出 PNG</strong> —— 2400×3200，2 倍分辨率</li></ul>
+<p>海报只由一张 Canvas 绘制，<strong>页面里看到的就是导出结果</strong>，不存在「所见非所得」。</p>
+<p>三套配色：终端绿 / 暖阳 / 极简黑白。</p>
+<p><img alt="暖阳配色" src="https://942740052.github.io/code-tree-rings/posters/poster-warm.png"></p>
+<h2>30 秒怎么玩</h2>
+<ol><li>打开上面的链接（或直接下载 <code>index.html</code> 双击打开）</li><li>点「<strong>复制命令</strong>」，在自己的仓库目录粘贴执行；也可以点「<strong>载入示例年度</strong>」</li><li>把输出粘进文本框，点「<strong>生成我的年轮</strong>」</li><li>点「<strong>导出 PNG</strong>」，2400×3200，保存下来发群</li></ol>
+<p><strong>不知道仓库目录在哪？</strong> 展开「不知道仓库目录在哪 / 不会用命令行？点这里 →」，里面有一条能自动列出你电脑上所有 git 仓库的命令，复制到终端跑一次就知道该 cd 去哪了。</p>
+<p><strong>没有 git 也能玩</strong>：展开「手动填数模式」，填提交数 / 活跃天数 / 连续天数 / 最常时段即可出图。</p>
+<p><img alt="界面" src="https://942740052.github.io/code-tree-rings/screenshots/ui-top.png"></p>
+<h2>病历本：它会怎么毒舌你</h2>
+<p>这是我最喜欢的一块。它按 11 条规则给你的 commit message「会诊」：</p>
+<table><thead><tr><th>病种</th><th>触发词举例</th></tr></thead><tbody><tr><td>急性半成品综合征</td><td><code>wip</code></td></tr><tr><td>键盘随机游走症</td><td><code>asdf</code> <code>qwer</code> <code>test</code></td></tr><tr><td>极简主义绝症</td><td><code>1</code> <code>.</code> <code>。</code></td></tr><tr><td>修补依赖症</td><td><code>fix</code> <code>修复</code> <code>改bug</code></td></tr><tr><td>修改失语症</td><td><code>update</code> <code>更新</code> <code>修改</code></td></tr><tr><td>职场真实症</td><td><code>摸鱼</code> <code>下班</code> <code>删库</code></td></tr><tr><td>情绪性提交</td><td><code>orz</code> <code>救命</code> <code>崩了</code></td></tr><tr><td>最终版妄想症（晚期）</td><td><code>最终版</code> <code>final</code></td></tr></tbody></table>
+<p>敷衍指数用 <code>1 − e^(−density/2.2)</code> 的指数衰减模型算出来（0 最健康，100 最病），再分五级：健康 / 早期 / 中期 / 晚期 / <strong>已列入 1024 纪念册</strong>。</p>
+<p>「最该被枪毙的那条」会挑出你历史上最敷衍的那句 commit —— 但纯符号和单字符不参与竞选，毕竟拿一个「.」出来甩锅没有说服力。</p>
+<p><img alt="病历本" src="https://942740052.github.io/code-tree-rings/posters/poster-mono.png"></p>
+<h2>技术实现（纯前端）</h2>
+<p>单文件 HTML，无框架、无 CDN、无后端、无第三方库，<code>file://</code> 下完整可用，<strong>87 KB</strong>。</p>
+<ul><li><strong>解析器</strong>：按行状态机，依次尝试「git 默认格式 → numstat → 自定义 format 头 → 缩进消息体 → <code>--oneline</code> → 续行兜底」；分隔符容忍 <code>|</code> <code>,</code> <code>;</code> <code>Tab</code>，subject 含分隔符时保留，CRLF / 二进制 <code>-</code> / 重命名 <code>a =&gt; b</code> / 注释行 / 空行全部容错，上限 20000 条截断</li><li><strong>中文路径还原</strong>：git 默认把非 ASCII 路径转义成八进制（<code>prd/\346\200\273...</code>），解析器逐字节还原成真实中文文件名</li><li><strong>编码兜底</strong>：自动识别 UTF-16LE / UTF-16BE / UTF-8 BOM —— Windows 的 <code>&gt;</code> 重定向写的是 UTF-16，粘进来不再满屏乱码</li><li><strong>统计层</strong>：24 小时 / 星期 / 动词 / 文件四类分桶；最长连续提交用「排序日期 + 相邻差 1 天」线性扫描</li><li><strong>渲染层</strong>：Canvas 2D，<strong>海报是唯一真相源</strong>，页面里看到的就是导出结果</li><li><strong>导出</strong>：离屏 Canvas <code>scale(2,2)</code> 重绘 + <code>toBlob</code>，2400×3200 PNG</li><li><strong>隐私</strong>：全部计算在浏览器内，<strong>零网络请求</strong>；排行榜只存本地 <code>localStorage</code></li></ul>
+<h2>TRAE 在创作中做了什么</h2>
+<p>这次几乎全流程都是我和 TRAE 一起完成的：</p>
+<ul><li><strong>解析器</strong>：git log 三种时间精度的格式兼容、git 默认格式的 <code>commit / Author: / Date:</code> 状态机、numstat 含二进制与重命名的归一化、分隔符容忍与 subject 切分策略</li><li><strong>统计口径</strong>：活跃天数、跨度、深夜指数、周末战士指数、最长连续提交的算法，以及 Builder 指数的加权公式</li><li><strong>海报设计</strong>：1200×1600 竖版布局、24 小时极坐标钟面、星期条形图、动词 Top5 横条、病历本面板排版与三套配色</li><li><strong>病历本规则</strong>：11 条规则的词表与权重设计，以及 <code>1 − e^(−density/2.2)</code> 的指数衰减模型和校准</li><li><strong>交互</strong>：拖放读文件、示例数据生成器、时间筛选、本地排行榜、导出与降级兜底</li><li><strong>自测</strong>：49 条断言的用例设计与边界值选取</li></ul>
+<p>最有意思的不是写功能，是<strong>把「看起来对」变成「验证过对」</strong>。</p>
+<p>海报排版第一版底部徽章和结尾文字是重叠的 —— 纯读代码看不出来，是靠无头 Chrome 批量出图 + 逐像素采样才发现的。同类问题还有两个：自己的真实仓库跑出来，「最常改的文件」全是 <code>\346\200\273</code> 乱码（一查才知道是 git 的 <code>quotepath</code> 转义），以及 Windows 的 <code>&gt;</code> 重定向写 UTF-16 导致只解析出 7/15 条提交。</p>
+<p>这三个坑都不是读代码能发现的，是<strong>拿自己的真实仓库跑一遍</strong>才暴露的。所以现在解析器把这类情况都兜住了，断言也从最初的 41 条加到 49 条。</p>
+<p><img alt="自检 49 条断言全通过" src="https://942740052.github.io/code-tree-rings/screenshots/selftest.png"></p>
+<h2>关键提示词</h2>
+<p>这个作品最初的想法，就是几句话聊出来的：</p>
+<blockquote>「我想弄一个年度总结那样的东西，把我的 git log 变成一张海报，最好能晒出去。」</blockquote>
+<blockquote>「不要任何依赖，就一个 HTML 文件，双击就能开，断网也要能用。」</blockquote>
+<blockquote>「数据千万不能传到任何地方，要全程留在浏览器里，不需要 token，不需要授权。」</blockquote>
+<blockquote>「提交数凑到 1024 就满级，段位从 2 的 0 次方排到 2 的 10 次方。」</blockquote>
+<blockquote>「commit message 也要玩一下，给我一个敷衍指数，再评个病情，顺便告诉我哪条最该被枪毙。」</blockquote>
+<h2>一些数字</h2>
+<ul><li>输入格式支持：<strong>5</strong> 种（自定义三种精度 / 默认格式 / oneline）</li><li>分隔符容忍：<strong>4</strong> 种</li><li>段位等级：<strong>11</strong> 级（2⁰ → 2¹⁰）</li><li>海报尺寸：1200×1600，导出 <strong>2400×3200</strong></li><li>配色：<strong>3</strong> 套</li><li>病历规则：<strong>11</strong> 条</li><li>内置断言：<strong>49</strong> 条（另有端到端测试 6 场景 <strong>32</strong> 项）</li><li>单文件体积：<strong>87 KB</strong></li><li>第三方依赖：<strong>0</strong></li><li>网络请求：<strong>0</strong></li></ul>
+<h2>立即体验</h2>
+<ul><li>在线：<a href="https://942740052.github.io/code-tree-rings/">https://942740052.github.io/code-tree-rings/</a></li><li>源码：<a href="https://github.com/942740052/code-tree-rings">https://github.com/942740052/code-tree-rings</a></li><li>离线：直接下载 <code>index.html</code> 双击打开（<strong>备用链接</strong>，托管打不开时用这个）</li></ul>
+<h2>你今年写到了第几圈？</h2>
+<p>1024 = 2¹⁰，段位从 2 的 0 次方排到 2 的 10 次方。</p>
+<p><strong>你今年提交了多少次？到第几圈了？</strong></p>
+<p>评论区贴一下你的段位和「最该被枪毙的那条」，我看看谁的病历最严重 —— 也看看谁先满级。</p>
+<p>顺便，我这张海报用的是自己真实的仓库（15 次提交，219 个文件），不是示例数据。真实数据那张也放出来给你看看：</p>
+<p><img alt="真实仓库数据生成的海报" src="https://942740052.github.io/code-tree-rings/posters/poster-real.png"></p>
+<p>1024，致敬每一个正在 Build 的人。</p>
+</div></body></html>
