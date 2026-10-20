@@ -136,9 +136,13 @@
 
 ## 立即体验
 
-- 在线：[https://942740052.github.io/code-tree-rings/](https://942740052.github.io/code-tree-rings/)
+**主推：下载 `code-tree-rings.html`，双击即开，完全离线。**
+
+- 下载：[code-tree-rings.html](https://github.com/942740052/code-tree-rings/releases/download/v1.0.0/code-tree-rings.html) —— 87 KB 单文件，零依赖、零网络请求，下载后双击就能玩（[Release 页](https://github.com/942740052/code-tree-rings/releases)）
+- 在线：[https://942740052.github.io/code-tree-rings/](https://942740052.github.io/code-tree-rings/) —— 不想下载就直接点开
 - 源码：[https://github.com/942740052/code-tree-rings](https://github.com/942740052/code-tree-rings)
-- 离线：直接下载 `index.html` 双击打开（**备用链接**，托管打不开时用这个）
+
+> 下载这份我实测过：文件 SHA256 与本地一致，独立打开后 49 条内置自检全部通过、海报正常渲染 —— 因为它真的不依赖任何外部服务，网络再差也能玩。
 
 ## 你今年写到了第几圈？
 
@@ -173,17 +177,36 @@
 | 标题格式 | `【1024Builder作品秀】+ 作品名` |
 | 必带话题 | `#1024Builder作品秀#` |
 | 正文图片 | 6 张外链直链，粘贴后自动显示（已实测无防盗链拦截） |
-| 备用 Demo | 打开作品页 → 拉到底 → 点「**下载本页 HTML（离线双击即用）**」→ 得到 `code-tree-rings.html`，作为附件上传 |
+| **Demo 方案** | **附件优先**：`code-tree-rings.html` 作为帖子附件上传；在线链接同时保留 |
 
-### 建议的 Demo 方案：在线 + 附件双保险
+### 附件怎么传
 
-社区里已经有作品因为「网页刷不出来」被卡住的。这个作品是纯静态单文件，**不存在后端挂掉的可能**，所以我做了三层保险：
+社区的 HTML 附件会被设成 `Content-Disposition: attachment`（点击是下载而非直接打开），这正好符合我们的用法 —— 别人下载后双击即开。
 
-1. **在线**：https://942740052.github.io/code-tree-rings/ （GitHub Pages，已实测 HTTP 200）
-2. **附件**：`code-tree-rings.html` 上传成帖子附件，下载后双击即开，**完全离线**（87 KB，零外部请求）
+上传前建议改个名：`index.html` → `code-tree-rings.html`，跟作品名对得上。
+
+拿到附件文件有两种方式：
+
+1. 直接用仓库里的 `index.html`（就是作品本体，87 KB）
+2. 打开作品页 → 拉到底 → 点「**下载本页 HTML（离线双击即用）**」→ 浏览器下载 `code-tree-rings.html`
+
+两条路产出的是同一份内容。**第 2 条的按钮我在 `file://` 下专门测过**：Chrome 禁止本地 XHR，代码会自动降级成 DOM 快照还原；实测两条路径产出的副本，独立打开后都是 49 条自检全通过、海报正常渲染。
+
+如果想在帖子里放一个"点开即玩"的下载按钮（而不是让读者自己找附件），可以用 Release 的下载地址，它带正确的下载响应头：
+
+```
+https://github.com/942740052/code-tree-rings/releases/download/v1.0.0/code-tree-rings.html
+```
+
+### 为什么主推附件
+
+社区里已经有作品因为「网页刷不出来」被卡住。这个作品是纯静态单文件，**没有后端、没有 CDN 依赖、没有外部字体**，所以我做了三层保险：
+
+1. **附件 / Release 下载**：`code-tree-rings.html`，87 KB，零网络请求 —— 唯一不依赖任何外部服务的方案
+2. **在线**：https://942740052.github.io/code-tree-rings/ （GitHub Pages，已实测 HTTP 200）
 3. **源码**：https://github.com/942740052/code-tree-rings
 
-即使网络环境有问题，附件也能玩。附件那一份我实测过：独立打开后 49 条自检全部通过。
+**只有附件这一条是百分之百不依赖外部服务的**，所以它排第一。在线链接是给懒得下载的人图个方便。
 
 ### 图片上传还是外链？
 

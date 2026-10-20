@@ -118,9 +118,13 @@
 
 ## 立即体验
 
-- 在线：[https://942740052.github.io/code-tree-rings/](https://942740052.github.io/code-tree-rings/)
+**主推：下载 `code-tree-rings.html`，双击即开，完全离线。**
+
+- 下载：[code-tree-rings.html](https://github.com/942740052/code-tree-rings/releases/download/v1.0.0/code-tree-rings.html) —— 87 KB 单文件，零依赖、零网络请求，下载后双击就能玩（[Release 页](https://github.com/942740052/code-tree-rings/releases)）
+- 在线：[https://942740052.github.io/code-tree-rings/](https://942740052.github.io/code-tree-rings/) —— 不想下载就直接点开
 - 源码：[https://github.com/942740052/code-tree-rings](https://github.com/942740052/code-tree-rings)
-- 离线：直接下载 `index.html` 双击打开（**备用链接**，托管打不开时用这个）
+
+> 下载这份我实测过：文件 SHA256 与本地一致，独立打开后 49 条内置自检全部通过、海报正常渲染 —— 因为它真的不依赖任何外部服务，网络再差也能玩。
 
 ## 你今年写到了第几圈？
 
