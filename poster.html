@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>代码年轮 · 海报导出页</title>
+<style>
+  html,body{margin:0;padding:0;background:#0B1016;}
+  canvas{display:block;}
+</style>
+</head>
+<body data-nick="阿 Build">
+<canvas id="cv" width="1200" height="1600"></canvas>
+<script>
+/* 海报导出页：fetch index.html → 抽出其 <script> 文本 → eval 执行 → 渲染海报。
+   避开 iframe 跨文档时序问题，以及 <script src="*.html"> 的限制。 */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var theme = q.get('theme') || 'terminal';
+  /* 昵称走 data-* 属性而非 URL 参数：中文经 URL 传参会乱码 */
+  var nick = document.body.getAttribute('data-nick') || '阿 Build';
+  var dataUrl = q.get('data');
+  var forced = q.get('party') === '1';
+
+  function fail(e) {
+    document.title = 'ERROR';
+    window.__error = String((e && e.stack) || e);
+    var cv = document.getElementById('cv');
+    var c = cv.getContext('2d');
+    c.fillStyle = '#f66';
+    c.font = '28px monospace';
+    c.fillText(String(e).slice(0, 60), 40, 80);
+  }
+
+  fetch('index.html')
+    .then(function (r) { return r.text(); })
+    .then(function (html) {
+      var m = html.match(/<script>([\s\S]*?)<\/script>/);
+      if (!m) throw new Error('未找到 script 块');
+      /* index.html 的 boot() 会跑 generate()，这里只取函数定义部分：
+         去掉末尾的启动调用，避免它操作不存在的 DOM 元素报错。 */
+      var code = m[1].replace(
+        /if \(document\.readyState === 'loading'\)[\s\S]*?else boot\(\);/,
+        '/* 跳过 boot，导出页自行驱动 */'
+      );
+      /* 去掉 globalThis.__CTR__ 暴露（它在 IIFE 内部，保留即可） */
+      (0, eval)(code);
+
+      var S = window.__CTR__;
+      if (!S) throw new Error('__CTR__ 未暴露');
+
+      function paint(st, dg, idx) {
+        var cv = document.getElementById('cv');
+        var c = cv.getContext('2d');
+        c.clearRect(0, 0, cv.width, cv.height);
+        S.renderPoster(c, st, { theme: theme, nickname: nick, diag: dg, index: idx, forceParty: forced });
+        window.__done = true;
+        document.title = 'READY';
+      }
+
+      if (dataUrl) {
+        return fetch(dataUrl).then(function (r) { return r.text(); }).then(function (txt) {
+          var recs = S.parseGitLog(txt).records;
+          var st = S.computeStats(recs);
+          var dg = S.diagnoseRecords(recs);
+          paint(st, dg, S.builderIndex(st, dg.score));
+        });
+      }
+      var recs = S.parseGitLog(S.buildSampleLog(1024)).records;
+      var st = S.computeStats(recs);
+      var dg = S.diagnoseRecords(recs);
+      paint(st, dg, S.builderIndex(st, dg.score));
+    })
+    .catch(fail);
+})();
+</script>
+</body>
+</html>

@@ -93,7 +93,7 @@
 index.html?selftest=1
 ```
 
-覆盖解析器（三种自定义精度、默认格式、oneline、numstat、二进制、重命名、CRLF、注释行、空输入、20000 条截断）、统计口径、段位 11 档边界、Builder 指数两端、病历规则逐条触发、示例数据确定性与规模、三种配色渲染、零数据与满级数据渲染、离屏画布像素非空、`toBlob` 环境可用性、时间过滤。共 **40** 条。
+覆盖解析器（三种自定义精度、默认格式、oneline、numstat、二进制、重命名、CRLF、注释行、空输入、20000 条截断）、统计口径、段位 11 档边界、Builder 指数两端、病历规则逐条触发、示例数据确定性与规模、三种配色渲染、零数据与满级数据渲染、离屏画布像素非空、`toBlob` 环境可用性、时间过滤。共 **41** 条。
 
 ---
 
@@ -105,7 +105,15 @@ index.html?selftest=1
 | `README.md` | 本文件 |
 | `verify.js` | 命令行自检，41 条断言（`node verify.js`） |
 | `e2e.js` | 端到端测试，6 场景 32 项（`node e2e.js`） |
+| `check-my-log.js` | 用真实仓库数据校验解析链路 |
+| `fetch-my-log.ps1` | 受限网络下经 GitHub API 还原 `git log --numstat` 输出 |
+| `my-gitlog.txt` | 真实仓库数据样本（Photo-collection，3 提交 / 232 文件） |
+| `poster.html` | 海报渲染页，供无头浏览器批量出图 |
+| `shoot-posters.ps1` | 批量生成海报 |
+| `check-posters.ps1` | 海报非空校验（逐像素采样，防导出空白） |
 | `serve.js` | 本地静态服务器（`node serve.js`），仅开发用 |
+| `posters/` | 生成的海报 PNG |
+| `screenshots/` | 界面与自检页截图 |
 
 示例数据（「阿 Build 的一年」）由页面内置的同种子确定性生成器产出，点「载入示例年度」即可获得，也可以点「下载示例 .txt」得到文件后拖回输入框，专门用于体验「拖入文件」这条路。
 

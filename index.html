@@ -683,7 +683,15 @@ function diagnoseSubjects(subjects) {
       if (w > localW) localW = w;
       density += w;
     }
-    if (localW > worstW) { worstW = localW; worstMsg = s; }
+    /* 「最该被枪毙的那条」要挑有可读性的：纯符号/单字符（"." "1" "。"）
+       虽然病得不轻，但展示出来没有说服力，直接不参与竞选；
+       同权重时优先更长的 subject。 */
+    var meaningful = s.length >= 2 && /[0-9A-Za-z一-龥]/.test(s);
+    if (meaningful) {
+      if (localW > worstW || (localW === worstW && s.length > worstMsg.length)) {
+        worstW = localW; worstMsg = s;
+      }
+    }
   }
   res.density = density / list.length;
   var d = Math.max(0, res.density);
@@ -1064,27 +1072,43 @@ function renderPoster(c, S, o) {
   c.fillText(ellipsize(c, diag.worst || '（没有，你很健康）', p3.w - 260), p3.x + 190, p3.y + 196);
 
   /* ---------- 结尾 ---------- */
+  /* 满级时底部要放「1024 达成」徽章，结尾整块下移避免重叠 */
+  var celebrate = (S.count >= 1024) || o.forceParty === true;
+  var endY = celebrate ? 1502 : 1432;   /* 结尾文字基线 */
+  var tagY = celebrate ? 1548 : 1490;   /* 话题标签基线 */
+
   c.textAlign = 'center';
   c.fillStyle = th.fg;
   c.font = fcn(30, '700');
-  c.fillText('1024 = 2¹⁰ —— 你已经写到了第 ' + S.count + ' 圈年轮', W / 2, 1432);
+  c.fillText('1024 = 2¹⁰ —— 你已经写到了第 ' + S.count + ' 圈年轮', W / 2, endY);
   c.fillStyle = th.accent;
   c.font = fmo(26, '700');
-  c.fillText('#1024Builder作品秀', W / 2, 1490);
-  c.fillStyle = th.muted;
-  c.font = fcn(16);
-  c.fillText('代码年轮 · Code Tree Rings ｜ 数据全程留在你的浏览器里', W / 2, 1536);
+  c.fillText('#1024Builder作品秀', W / 2, tagY);
+  if (!celebrate) {
+    c.fillStyle = th.muted;
+    c.font = fcn(16);
+    c.fillText('代码年轮 · Code Tree Rings ｜ 数据全程留在你的浏览器里', W / 2, 1536);
+  }
   c.textAlign = 'left';
 
   /* ---------- 烟花 ---------- */
-  var celebrate = (S.count >= 1024) || o.forceParty === true;
   if (celebrate) {
     var fr = lcg(20261024);
     c.save();
     c.globalCompositeOperation = 'lighter';
+    /* 烟花避开图表面板（y 404-672）、大数字区（y 680-840）与底部徽章区，
+       只落在标题带与左右窄边，否则粒子会盖住文字。 */
+    var zones = [
+      { x0: 90,  x1: W - 90,  y0: 175, y1: 380 },   /* 标题带与段位徽章之间 */
+      { x0: 24,  x1: 62,      y0: 420, y1: 660 },   /* 左侧窄边 */
+      { x0: W - 62, x1: W - 24, y0: 420, y1: 660 }, /* 右侧窄边 */
+      { x0: 24,  x1: 62,      y0: 880, y1: 1120 },  /* 左侧下段（避开大数字） */
+      { x0: W - 62, x1: W - 24, y0: 880, y1: 1120 } /* 右侧下段 */
+    ];
     for (var f = 0; f < 16; f++) {
-      var rx = 120 + fr() * (W - 240);
-      var ry = 260 + fr() * 460;
+      var z = zones[f % zones.length];
+      var rx = z.x0 + fr() * (z.x1 - z.x0);
+      var ry = z.y0 + fr() * (z.y1 - z.y0);
       var hue = 90 + fr() * 160;
       var cnt = 70 + Math.floor(fr() * 60);
       for (var s = 0; s < cnt; s++) {
@@ -1092,7 +1116,7 @@ function renderPoster(c, S, o) {
         var sp = 1 + fr() * 4.6;
         var px = rx + Math.cos(a2) * sp * 7;
         var py = ry + Math.sin(a2) * sp * 7;
-        c.globalAlpha = .55 * (1 - sp / 6);
+        c.globalAlpha = .5 * (1 - sp / 6);
         c.fillStyle = 'hsl(' + hue + ',85%,62%)';
         c.beginPath();
         c.arc(px, py, 1.4 + fr() * 1.6, 0, Math.PI * 2);
@@ -1100,6 +1124,7 @@ function renderPoster(c, S, o) {
       }
     }
     c.restore();
+    /* 徽章：独占 1392-1446 一行，不与结尾文字重叠 */
     c.save();
     c.globalAlpha = .92;
     c.fillStyle = th.badge;
