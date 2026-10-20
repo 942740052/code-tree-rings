@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>代码年轮 · 把你的 git log 变成一张 1024 年度海报</title>
+<style>
+:root{
+  --bg:#070B10; --panel:#0E1720; --panel2:#152230; --line:#1E3244;
+  --fg:#E8F5EE; --muted:#7C93A2; --accent:#22C55E; --accent2:#38BDF8;
+  --danger:#F87171; --warn:#FBBF24;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:radial-gradient(1200px 600px at 20% -10%, #10202C 0%, var(--bg) 55%) fixed, var(--bg);
+  color:var(--fg);
+  font:15px/1.6 "Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+  min-height:100vh;
+}
+a{color:var(--accent2)}
+code,pre,.mono{font-family:Consolas,"Cascadia Mono","Courier New",monospace}
+.wrap{max-width:1440px;margin:0 auto;padding:24px 20px 64px}
+header.top{
+  display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:18px;border-bottom:1px solid #1B2E3C;margin-bottom:24px;
+}
+.brand{display:flex;align-items:center;gap:14px}
+.brand .mark{
+  width:46px;height:46px;border-radius:12px;flex:none;
+  background:linear-gradient(135deg,var(--accent),#0EA5E9);
+  display:flex;align-items:center;justify-content:center;
+  font:700 20px Consolas,monospace;color:#04140A;
+}
+h1{font-size:24px;margin:0;letter-spacing:.5px}
+h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:4px;letter-spacing:0}
+.tagline{font-size:13px;color:var(--muted);text-align:right;max-width:420px}
+.tagline b{color:var(--accent)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:1080px){main{grid-template-columns:1fr}}
+.card{
+  background:linear-gradient(180deg,var(--panel),#0B131B);
+  border:1px solid #1B2E3C;border-radius:16px;padding:18px;
+}
+.card + .card{margin-top:18px}
+.card h2{
+  margin:0 0 14px;font-size:15px;letter-spacing:1px;color:var(--accent);
+  display:flex;align-items:center;gap:8px;
+}
+.card h2 .n{
+  width:22px;height:22px;border-radius:6px;background:#16283A;color:var(--accent2);
+  font:700 12px Consolas,monospace;display:inline-flex;align-items:center;justify-content:center;flex:none;
+}
+.hint{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tab{
+  border:1px solid #22384C;background:#0D1720;color:var(--muted);
+  padding:6px 12px;border-radius:999px;font-size:12.5px;cursor:pointer;
+}
+.tab[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:#0F2A1C}
+pre.cmd{
+  margin:0 0 10px;padding:12px 14px;background:#060A0F;border:1px solid #1A2C3A;border-radius:10px;
+  font-size:12.5px;line-height:1.7;color:#B9D6C8;overflow-x:auto;white-space:pre;
+}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+button{
+  font:600 13.5px/1 "Microsoft YaHei","PingFang SC",sans-serif;
+  border-radius:10px;padding:11px 16px;cursor:pointer;border:1px solid transparent;
+  transition:filter .12s ease, transform .06s ease;
+}
+button:active{transform:translateY(1px)}
+button:hover{filter:brightness(1.12)}
+.btn-primary{background:var(--accent);color:#04140A}
+.btn-ghost{background:#0D1720;border-color:#22384C;color:var(--fg)}
+.btn-sm{padding:8px 12px;font-size:12.5px}
+textarea,input[type=text]{
+  width:100%;background:#060A0F;border:1px solid #1A2C3A;border-radius:10px;
+  color:var(--fg);padding:12px;font:13px/1.65 Consolas,"Cascadia Mono",monospace;
+  resize:vertical;
+}
+textarea:focus,input[type=text]:focus{outline:none;border-color:var(--accent)}
+textarea#logInput{min-height:190px}
+.drop{
+  border:1.5px dashed #24425C;border-radius:12px;padding:10px 12px;margin-top:10px;
+  font-size:12.5px;color:var(--muted);text-align:center;
+}
+.drop.over{border-color:var(--accent);color:var(--accent);background:#0E2118}
+.msg{margin-top:10px;font-size:12.5px;padding:9px 12px;border-radius:9px;display:none}
+.msg.show{display:block}
+.msg.ok{background:#0E2118;border:1px solid #1F6B3F;color:#8FE3AE}
+.msg.err{background:#2A1414;border:1px solid #7A2B2B;color:#F4A6A6}
+.msg.warn{background:#2A2310;border:1px solid #7A6520;color:#F6D68A}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+label.fld{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.stat{background:#0A141D;border:1px solid #1A2C3A;border-radius:11px;padding:11px 12px}
+.stat .k{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.stat .v{font:700 19px/1.2 Consolas,"Cascadia Mono",monospace;color:var(--fg)}
+.stat .v.acc{color:var(--accent)}
+.stat .v.sm{font-size:15px}
+.rank{
+  display:inline-flex;align-items:center;gap:10px;background:#0A141D;border:1px solid #1A2C3A;
+  border-radius:11px;padding:11px 14px;margin-bottom:12px;
+}
+.rank .lv{font:700 26px/1 Consolas,monospace;color:var(--accent)}
+.rank .tt{font-size:14px;font-weight:700}
+.rank .sub{font-size:11.5px;color:var(--muted)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+.chip{
+  border:1px solid #22384C;background:#0D1720;color:var(--muted);border-radius:999px;
+  padding:5px 12px;font-size:12.5px;cursor:pointer;
+}
+.chip[aria-pressed="true"]{border-color:var(--accent2);color:var(--accent2);background:#0B1E28}
+.pal{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:38px;height:38px;border-radius:10px;border:2px solid #22384C;cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{border-color:var(--accent)}
+.sw.term{background:linear-gradient(135deg,#070B10 50%,#22C55E 50%)}
+.sw.warm{background:linear-gradient(135deg,#FFF7EE 50%,#EA580C 50%)}
+.sw.mono{background:linear-gradient(135deg,#FFFFFF 50%,#111111 50%)}
+canvas#poster{
+  width:100%;height:auto;display:block;border-radius:14px;
+  border:1px solid #1B2E3C;background:#070B10;
+}
+.posterWrap{position:relative}
+.posterWrap .badge1024{
+  position:absolute;top:12px;right:12px;background:var(--accent);color:#04140A;
+  font:700 12px/1 Consolas,monospace;padding:7px 10px;border-radius:8px;letter-spacing:1px;
+}
+details.manual{margin-top:12px;border-top:1px solid #1A2C3A;padding-top:10px}
+details.manual summary{cursor:pointer;font-size:13px;color:var(--accent2)}
+details.manual .body{margin-top:10px}
+.disease{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0;border-bottom:1px dashed #1A2C3A}
+.disease:last-child{border-bottom:none}
+.disease .c{font-family:Consolas,monospace;color:var(--warn)}
+.worst{background:#0A141D;border:1px solid #1A2C3A;border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
+.worst b{color:var(--danger)}
+ol.board{margin:8px 0 0;padding-left:22px;font-size:12.5px;color:var(--muted)}
+ol.board li{padding:3px 0}
+ol.board li b{color:var(--fg);font-family:Consolas,monospace}
+footer.foot{margin-top:34px;padding-top:16px;border-top:1px solid #1B2E3C;font-size:12px;color:var(--muted);text-align:center}
+.hidden{display:none!important}
+#selftest{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+#selftest h1{font-size:22px}
+#stSummary{font-size:14px;margin:12px 0 18px}
+#stSummary.fail{color:var(--danger)}
+#stSummary.pass{color:var(--accent)}
+table.st{width:100%;border-collapse:collapse;font-size:12.5px}
+table.st th,table.st td{border:1px solid #1A2C3A;padding:6px 9px;text-align:left}
+table.st th{background:#0D1720;color:var(--accent)}
+table.st td.r{font-family:Consolas,monospace;white-space:nowrap}
+tr.fail td{background:#2A1414}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <div class="mark">2&#185;&#8304;</div>
+    <h1>代码年轮 <small>Code Tree Rings · 把你的 git log 变成一张 1024 年度海报</small></h1>
+  </div>
+  <div class="tagline">
+    纯前端 · 零依赖 · 双击即开 · 离线可用。<b>数据全程不离开你的浏览器</b>，不需要 token，不需要授权。<br>
+    1024 = 2&#185;&#8304;，看看你写到了第几圈年轮。
+  </div>
+</header>
+
+<main>
+  <!-- ============ 左：输入 ============ -->
+  <div>
+    <section class="card">
+      <h2><span class="n">1</span>导出你的 git log</h2>
+      <p class="hint">在你的仓库目录下跑一条命令，把输出整段粘过来。多个仓库的输出直接粘在一起就行。</p>
+      <div class="tabs" role="tablist" id="cmdTabs">
+        <button class="tab" role="tab" aria-selected="true" data-cmd="full">完整版（推荐）</button>
+        <button class="tab" role="tab" aria-selected="false" data-cmd="lite">精简版</button>
+        <button class="tab" role="tab" aria-selected="false" data-cmd="oneline">极简版</button>
+      </div>
+      <pre class="cmd" id="cmdBox"></pre>
+      <div class="btnrow">
+        <button class="btn-ghost btn-sm" id="btnCopy">复制命令</button>
+        <button class="btn-ghost btn-sm" id="btnSample">载入示例年度</button>
+        <button class="btn-ghost btn-sm" id="btnDownloadSample">下载示例 .txt</button>
+        <button class="btn-ghost btn-sm" id="btnClear">清空</button>
+      </div>
+
+      <label class="fld" for="logInput">粘贴 git log 输出（也可以把 .txt 文件拖进来）</label>
+      <textarea id="logInput" spellcheck="false" placeholder="在此粘贴 git log 输出&#10;&#10;支持：&#10;· git log --pretty=format:'%h|%ad|%an|%s' 的三种时间精度&#10;· git log 默认输出（直接复制终端内容）&#10;· git log --oneline&#10;· 带 --numstat 的增删行与文件统计&#10;· 二进制文件与重命名"></textarea>
+      <div class="drop" id="dropZone">把 gitlog.txt 拖到这里松开即可</div>
+      <div class="msg" id="parseMsg"></div>
+
+      <div class="btnrow">
+        <button class="btn-primary" id="btnGen">生成我的年轮</button>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="fld" for="nickname">海报上的昵称</label>
+          <input type="text" id="nickname" placeholder="留空则取最高频作者名">
+        </div>
+        <div>
+          <label class="fld">配色</label>
+          <div class="pal" id="palSel">
+            <button class="sw term" aria-pressed="true" data-theme="terminal" title="终端绿"></button>
+            <button class="sw warm" aria-pressed="false" data-theme="warm" title="暖阳"></button>
+            <button class="sw mono" aria-pressed="false" data-theme="mono" title="极简黑白"></button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <label class="fld">时间范围</label>
+        <div class="chips" id="yearChips"></div>
+      </div>
+
+      <details class="manual">
+        <summary>没有 git？用手动填数模式 →</summary>
+        <div class="body grid2">
+          <div>
+            <label class="fld" for="mCount">总提交数</label>
+            <input type="text" id="mCount" inputmode="numeric" placeholder="例如 512">
+          </div>
+          <div>
+            <label class="fld" for="mDays">活跃天数</label>
+            <input type="text" id="mDays" inputmode="numeric" placeholder="例如 180">
+          </div>
+          <div>
+            <label class="fld" for="mStreak">最长连续提交天数</label>
+            <input type="text" id="mStreak" inputmode="numeric" placeholder="例如 21">
+          </div>
+          <div>
+            <label class="fld" for="mPeak">最常提交的时段</label>
+            <input type="text" id="mPeak" placeholder="例如 深夜 / 上午 / 下午 / 晚间">
+          </div>
+          <div style="grid-column:1/-1">
+            <button class="btn-ghost btn-sm" id="btnManual">用手动数据生成</button>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">2</span>commit message 病历本</h2>
+      <p class="hint">从上面解析出的提交记录自动生成；也可以单独粘贴一批 commit message（每行一条）单独诊断。</p>
+      <div id="diagBox"></div>
+      <div style="margin-top:14px">
+        <label class="fld" for="msgInput">单独粘贴 commit message（每行一条）</label>
+        <textarea id="msgInput" spellcheck="false" style="min-height:96px" placeholder="fix&#10;fix&#10;wip&#10;最终版&#10;最终版2"></textarea>
+        <div class="btnrow">
+          <button class="btn-ghost btn-sm" id="btnDiag">诊断这批 message</button>
+          <button class="btn-ghost btn-sm" id="btnSaveBoard">存入本地排行榜</button>
+        </div>
+      </div>
+      <div id="boardBox"></div>
+    </section>
+  </div>
+
+  <!-- ============ 右：输出 ============ -->
+  <div>
+    <section class="card">
+      <h2><span class="n">3</span>你的年轮</h2>
+      <div id="statBox"></div>
+      <div style="margin-top:16px" class="posterWrap">
+        <canvas id="poster" width="1200" height="1600"></canvas>
+        <div class="badge1024 hidden" id="p1024">1024 达成</div>
+      </div>
+      <div class="btnrow">
+        <button class="btn-primary" id="btnExport">导出 PNG（2400×3200）</button>
+        <button class="btn-ghost btn-sm" id="btnRepaint">重绘海报</button>
+      </div>
+      <div class="msg" id="exportMsg"></div>
+      <p class="hint" style="margin-top:12px">
+        海报只由这一张 Canvas 绘制，页面里看到的就是导出结果，不存在「所见非所得」。<br>
+        满级彩蛋：提交数 ≥ 1024，或 10 月 24 日当天打开，海报会放烟花。
+      </p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  代码年轮 · Code Tree Rings ｜ 为 TRAE 社区 1024Builder 作品秀而建 ｜ 单文件 · 零依赖 · 数据不出浏览器
+</footer>
+</div>
+
+<!-- ============ 自检面板 ============ -->
+<div id="selftest" class="hidden">
+  <h1>代码年轮 · 内置自检</h1>
+  <p class="hint">在地址栏给 index.html 加上 <code>?selftest=1</code> 即可运行。覆盖解析器、统计口径、段位边界、病历规则、海报绘制与 PNG 导出。</p>
+  <div id="stSummary"></div>
+  <table class="st"><thead><tr><th style="width:34px">#</th><th>断言</th><th style="width:150px">结果</th><th style="width:320px">说明</th></tr></thead><tbody id="stBody"></tbody></table>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ============================================================
+ * 0. 小工具
+ * ============================================================ */
+function $(id) { return document.getElementById(id); }
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+/* ============================================================
+ * 1. 常量
+ * ============================================================ */
+var MAX_RECORDS = 20000;
+var POSTER_W = 1200, POSTER_H = 1600;
+
+/** 段位表：2^0 → 2^10，把 1024 直接做成等级终点 */
+var LEVELS = [
+  { need: 1,     name: 'Hello, World' },
+  { need: 2,     name: '第一次 commit' },
+  { need: 4,     name: '渐入佳境' },
+  { need: 8,     name: '有了节奏' },
+  { need: 16,    name: '周末战士' },
+  { need: 32,    name: '深夜档常客' },
+  { need: 64,    name: '代码呼吸法' },
+  { need: 128,   name: '稳定输出' },
+  { need: 256,   name: '流水线工匠' },
+  { need: 512,   name: '半自动 Build 机' },
+  { need: 1024,  name: '2¹⁰ · 满级 Builder' }
+];
+
+var THEMES = {
+  terminal: {
+    bg: '#070B10', panel: '#0E1720', panel2: '#16283A', fg: '#E8F5EE', muted: '#6E8797',
+    accent: '#22C55E', accent2: '#38BDF8', line: 'rgba(34,197,94,.28)',
+    badge: '#22C55E', badgeFg: '#04140A', grid: 'rgba(56,189,248,.07)'
+  },
+  warm: {
+    bg: '#FFF7EE', panel: '#FFEFDF', panel2: '#F7DFC4', fg: '#2A1F16', muted: '#8B7A68',
+    accent: '#EA580C', accent2: '#B45309', line: 'rgba(234,88,12,.28)',
+    badge: '#EA580C', badgeFg: '#FFF7EE', grid: 'rgba(180,83,9,.08)'
+  },
+  mono: {
+    bg: '#FFFFFF', panel: '#F4F4F4', panel2: '#E6E6E6', fg: '#111111', muted: '#8A8A8A',
+    accent: '#111111', accent2: '#555555', line: 'rgba(0,0,0,.22)',
+    badge: '#111111', badgeFg: '#FFFFFF', grid: 'rgba(0,0,0,.05)'
+  }
+};
+
+var MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+var CN_STACK = '"Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif';
+var MONO_STACK = 'Consolas,"Cascadia Mono","Courier New",monospace';
+
+var COMMANDS = {
+  full:
+"git log --all --since='12 months ago' \\\n" +
+"  --date=format:'%Y-%m-%d %H:%M:%S' \\\n" +
+"  --pretty=format:'%h|%ad|%an|%s' --numstat",
+  lite:
+"git log --all --since='12 months ago' \\\n" +
+"  --pretty=format:'%h|%ad|%an|%s' --date=short",
+  oneline:
+"git log --all --since='12 months ago' --oneline"
+};
+
+/* ============================================================
+ * 2. 解析器（状态机）
+ * ============================================================ */
+function isHash(s) { return /^[0-9a-f]{6,40}$/i.test(s); }
+
+/** 只按前 3 个分隔符切分，其余归 subject；分隔符容忍 | , ; tab */
+function splitHead(line) {
+  var delims = ['|', '\t', ';', ','];
+  for (var i = 0; i < delims.length; i++) {
+    var d = delims[i];
+    if (line.indexOf(d) === -1) continue;
+    var parts = line.split(d);
+    if (parts.length < 4) continue;
+    if (!isHash(parts[0].trim())) continue;
+    return {
+      hash: parts[0].trim(),
+      date: parts[1].trim(),
+      author: parts[2].trim(),
+      subject: parts.slice(3).join(d).trim()
+    };
+  }
+  return null;
+}
+
+function parseStrictDate(s) {
+  if (!s) return null;
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/.exec(String(s).trim());
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4] || 0, +m[5] || 0, +m[6] || 0);
+}
+
+function parseLooseDate(s) {
+  s = String(s || '').trim();
+  if (!s) return null;
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/.exec(s);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4] || 0, +m[5] || 0, +m[6] || 0);
+  /* git 默认格式：Tue Oct 20 10:30:45 2026 +0800 */
+  var m1 = /^[A-Za-z]{3},?\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(\d{4})/.exec(s);
+  if (m1) {
+    var mo = MON[m1[1].toLowerCase()];
+    if (mo !== undefined) return new Date(+m1[6], mo, +m1[2], +m1[3], +m1[4], +m1[5]);
+  }
+  /* RFC 风格：20 Oct 2026 10:00:00 */
+  var m2 = /(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/.exec(s);
+  if (m2) {
+    var mo2 = MON[m2[2].toLowerCase()];
+    if (mo2 !== undefined) return new Date(+m2[3], mo2, +m2[1], +m2[4], +m2[5], +m2[6]);
+  }
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * 归一化 numstat 路径。
+ * 处理两种重命名格式：
+ *   "src/{old => new}/a.js"  →  "src/new/a.js"   （保留花括号外的父目录）
+ *   "old.js => new.js"       →  "new.js"
+ */
+function normalizePath(p) {
+  var s = String(p || '').trim();
+  /* 形式一：花括号包裹，取 { } 内 => 右侧，再拼回括号前后的部分 */
+  var braced = /\{([^{}]*?)\s*=>\s*([^{}]*?)\}/.exec(s);
+  if (braced) {
+    var idx = braced.index;
+    var before = s.slice(0, idx);
+    var after = s.slice(idx + braced[0].length);
+    return before + braced[2].trim() + after;
+  }
+  /* 形式二：整段 "old => new"，取右侧 */
+  var plain = /^(.*?)\s*=>\s*(.*)$/.exec(s);
+  if (plain) return plain[2].trim();
+  return s;
+}
+
+function newRec(hash, date, author, subject) {
+  return { hash: hash, date: date, author: author || '', subject: subject || '', body: '', added: 0, deleted: 0, files: [] };
+}
+
+/**
+ * 解析 git log 文本。
+ * 支持：自定义 format（三种时间精度）、git 默认格式、--oneline、--numstat、续行、CRLF。
+ * 返回 { records, truncated }
+ */
+function parseGitLog(text) {
+  var out = { records: [], truncated: false };
+  if (!text) return out;
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var records = out.records;
+  var last = null;
+
+  for (var i = 0; i < lines.length; i++) {
+    if (records.length >= MAX_RECORDS) { out.truncated = true; break; }
+    var line = lines[i];
+    var t = line.trim();
+    if (!t) continue;
+
+    /* 注释行（# 开头但不是 #123 这类 issue 引用） */
+    if (/^#(?!\d)/.test(t)) continue;
+    /* #1024 这类「井号 + 纯数字」不是 issue 引用，视作注释 */
+    if (/^#\d+$/.test(t)) continue;
+
+    /* --- git 默认格式 --- */
+    var cm = /^commit\s+([0-9a-f]{6,40})/i.exec(t);
+    if (cm) { last = newRec(cm[1], null, '', ''); records.push(last); continue; }
+    if (last && /^Merge:/i.test(t)) continue;
+    if (last && /^Author:/i.test(t)) {
+      var am = /^Author:\s*(.*)$/i.exec(t);
+      var a = am[1].replace(/\s*<[^>]*>\s*$/, '').trim();
+      if (a) last.author = a;
+      continue;
+    }
+    if (last && /^Date:/i.test(t)) {
+      var dm = /^Date:\s*(.*)$/i.exec(t);
+      last.date = parseLooseDate(dm[1].trim());
+      continue;
+    }
+
+    /* --- numstat：增删行 + 文件 --- */
+    var nm = /^(\d+|-)\t(\d+|-)\t(.+)$/.exec(line);
+    if (nm && last) {
+      last.added += (nm[1] === '-' ? 0 : parseInt(nm[1], 10));
+      last.deleted += (nm[2] === '-' ? 0 : parseInt(nm[2], 10));
+      last.files.push(normalizePath(nm[3]));
+      continue;
+    }
+
+    /* --- 自定义 format 头 --- */
+    var head = splitHead(t);
+    if (head) {
+      last = newRec(head.hash, parseStrictDate(head.date), head.author, head.subject);
+      records.push(last);
+      continue;
+    }
+
+    /* --- 缩进的消息体（默认格式）--- */
+    if (last && /^\s{2,}\S/.test(line)) {
+      var body = line.replace(/^\s+/, '');
+      if (!last.subject) last.subject = body.trim();
+      else last.body += (last.body ? '\n' : '') + body.trim();
+      continue;
+    }
+
+    /* --- --oneline --- */
+    var om = /^([0-9a-f]{6,40})\s+(\S.*)$/.exec(t);
+    if (om) {
+      last = newRec(om[1], null, '', om[2].trim());
+      records.push(last);
+      continue;
+    }
+
+    /* --- 兜底：续行 --- */
+    if (last) last.body += (last.body ? '\n' : '') + t;
+  }
+  return out;
+}
+
+/* ============================================================
+ * 3. 统计
+ * ============================================================ */
+function dayKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+function computeStats(records) {
+  var S = {
+    count: records.length,
+    dated: 0, undated: 0,
+    activeDays: 0, spanDays: 0, firstDate: null, lastDate: null,
+    hours: new Array(24).fill(0),
+    weekdays: new Array(7).fill(0),
+    verbs: [], files: [],
+    added: 0, deleted: 0, fileTouched: 0,
+    weekendRatio: 0, nightRatio: 0, streak: 0,
+    peakHour: 0, topDay: null, years: [],
+    dayMap: {}
+  };
+  var dayMap = {}, verbMap = {}, fileMap = {}, yearMap = {};
+  var first = null, last = null;
+
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    if (!r.date) { S.undated++; continue; }
+    S.dated++;
+    var d = r.date;
+    if (!first || d < first) first = d;
+    if (!last || d > last) last = d;
+    var y = d.getFullYear();
+    yearMap[y] = (yearMap[y] || 0) + 1;
+    var k = dayKey(d);
+    dayMap[k] = (dayMap[k] || 0) + 1;
+    S.hours[d.getHours()]++;
+    S.weekdays[d.getDay()]++;
+
+    var s = (r.subject || '').trim();
+    var vm = s.match(/^[A-Za-z][A-Za-z0-9_\-]*/);
+    var verb;
+    if (vm) verb = vm[0].toLowerCase();
+    else {
+      var cj = s.match(/^[\u4e00-\u9fa5]{1,4}/);
+      verb = cj ? cj[0] : '（无题）';
+    }
+    if (verb) verbMap[verb] = (verbMap[verb] || 0) + 1;
+
+    for (var f = 0; f < r.files.length; f++) {
+      var p = r.files[f];
+      if (p) { fileMap[p] = (fileMap[p] || 0) + 1; S.fileTouched++; }
+    }
+    S.added += r.added;
+    S.deleted += r.deleted;
+  }
+
+  S.firstDate = first; S.lastDate = last;
+  S.dayMap = dayMap;
+  S.activeDays = Object.keys(dayMap).length;
+  if (first && last) S.spanDays = Math.max(1, Math.round((last - first) / 86400000) + 1);
+
+  /* 动词 Top */
+  var va = [];
+  for (var vk in verbMap) if (verbMap.hasOwnProperty(vk)) va.push({ w: vk, c: verbMap[vk] });
+  va.sort(function (a, b) { return b.c - a.c || (a.w < b.w ? -1 : 1); });
+  S.verbs = va.slice(0, 5);
+
+  /* 文件 Top */
+  var fa = [];
+  for (var fk in fileMap) if (fileMap.hasOwnProperty(fk)) fa.push({ p: fk, c: fileMap[fk] });
+  fa.sort(function (a, b) { return b.c - a.c || (a.p < b.p ? -1 : 1); });
+  S.files = fa.slice(0, 5);
+
+  /* 周末 / 深夜 / 峰值 */
+  var weekend = 0, night = 0;
+  for (var h = 0; h < 24; h++) { if (h < 6) night += S.hours[h]; }
+  weekend = S.weekdays[0] + S.weekdays[6];
+  if (S.dated > 0) {
+    S.weekendRatio = weekend / S.dated;
+    S.nightRatio = night / S.dated;
+  }
+  var ph = 0;
+  for (var h2 = 0; h2 < 24; h2++) if (S.hours[h2] > S.hours[ph]) ph = h2;
+  S.peakHour = ph;
+
+  var bestD = null, bestC = -1;
+  for (var dk in dayMap) {
+    if (!dayMap.hasOwnProperty(dk)) continue;
+    if (dayMap[dk] > bestC) { bestC = dayMap[dk]; bestD = dk; }
+  }
+  S.topDay = bestD ? { d: bestD, c: bestC } : null;
+
+  /* 最长连续提交 */
+  var keys = Object.keys(dayMap).sort();
+  var run = 0, best = 0, prev = null;
+  for (var ki = 0; ki < keys.length; ki++) {
+    var cur = new Date(keys[ki].slice(0, 4) + '-' + keys[ki].slice(5, 7) + '-' + keys[ki].slice(8, 10) + 'T00:00:00');
+    if (prev && Math.round((cur - prev) / 86400000) === 1) run++;
+    else run = 1;
+    if (run > best) best = run;
+    prev = cur;
+  }
+  S.streak = best;
+
+  var ya = [];
+  for (var yk in yearMap) if (yearMap.hasOwnProperty(yk)) ya.push(+yk);
+  ya.sort(function (a, b) { return b - a; });
+  S.years = ya;
+  return S;
+}
+
+function levelFor(n) {
+  var lv = 0;
+  for (var i = 0; i < LEVELS.length; i++) if (n >= LEVELS[i].need) lv = i;
+  return lv;
+}
+
+/**
+ * Builder 指数（0–100）：
+ * 0.4×活跃天数占比 + 0.2×连续提交 + 0.2×作息健康 + 0.2×命名健康
+ */
+function builderIndex(S, sloppiness) {
+  var active = S.spanDays > 0 ? clamp(S.activeDays / S.spanDays, 0, 1) : 0;
+  var streak = clamp(S.streak / 30, 0, 1);
+  var health = 1 - clamp(S.nightRatio, 0, 1);
+  var naming = 1 - clamp((sloppiness || 0) / 100, 0, 1);
+  return Math.round(clamp(100 * (0.4 * active + 0.2 * streak + 0.2 * health + 0.2 * naming), 0, 100));
+}
+
+/* ============================================================
+ * 4. commit message 病历本
+ * ============================================================ */
+var RULES = [
+  { re: /(最终版|真的最终|最后一版|final)/i, w: 4, name: '最终版妄想症（晚期）' },
+  { re: /(^|[^a-z])wip([^a-z]|$)/i, w: 3, name: '急性半成品综合征' },
+  { re: /(^|[^a-z])(asdf|qwer|zxcv|zzz|xxx+|test)([^a-z]|$)/i, w: 3, name: '键盘随机游走症' },
+  { re: /^[0-9]+$/, w: 5, name: '极简主义绝症' },
+  { re: /^[.。!！?？\-_~]+$/, w: 5, name: '极简主义绝症' },
+  { re: /^.{1,2}$/, w: 4, name: '极简主义绝症' },
+  { re: /(^|[^a-z])(fix|fixed|fixes|bugfix|hotfix|修复|修一下|改bug)([^a-z]|$)/i, w: 2, name: '修补依赖症' },
+  { re: /(^|[^a-z])(update|updated|更新|修改|改了|调整一下)([^a-z]|$)/i, w: 2, name: '修改失语症' },
+  { re: /(摸鱼|下班|跑路|删库|不想干|摆烂|躺平)/i, w: 2, name: '职场真实症' },
+  { re: /(orz|救命|裂开|崩了|emo|呜呜|麻了|啊这)/i, w: 2, name: '情绪性提交' },
+  { re: /(^|[^a-z])(refactor|重构|优化|optimize|cleanup|clean up)([^a-z]|$)/i, w: 1, name: '重构冲动（轻微）' },
+  { re: /^(feat|feature|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]*\))?!?:\s+\S/, w: -1, name: '建设性人格（加分）' }
+];
+var GRADES = [
+  { max: 19, name: '健康', color: 'var(--accent)' },
+  { max: 39, name: '早期', color: 'var(--accent2)' },
+  { max: 59, name: '中期', color: 'var(--warn)' },
+  { max: 79, name: '晚期', color: '#FB923C' },
+  { max: 100, name: '已列入 1024 纪念册', color: 'var(--danger)' }
+];
+
+function diagnoseSubjects(subjects) {
+  var list = (subjects || []).filter(function (s) { return String(s || '').trim(); });
+  var res = { n: list.length, score: 0, grade: GRADES[0], hits: [], worst: null, density: 0 };
+  if (!list.length) return res;
+
+  var density = 0, worstW = -1, worstMsg = '';
+  var hitMap = {};
+  for (var i = 0; i < list.length; i++) {
+    var s = String(list[i]).trim();
+    var local = 0, localW = 0;
+    for (var r = 0; r < RULES.length; r++) {
+      if (!RULES[r].re.test(s)) continue;
+      var w = RULES[r].w;
+      hitMap[RULES[r].name] = (hitMap[RULES[r].name] || 0) + 1;
+      local += w;
+      if (w > localW) localW = w;
+      density += w;
+    }
+    if (localW > worstW) { worstW = localW; worstMsg = s; }
+  }
+  res.density = density / list.length;
+  var d = Math.max(0, res.density);
+  res.score = clamp(Math.round(100 * (1 - Math.exp(-d / 2.2))), 0, 100);
+  for (var g = 0; g < GRADES.length; g++) if (res.score <= GRADES[g].max) { res.grade = GRADES[g]; break; }
+  var ha = [];
+  for (var k in hitMap) if (hitMap.hasOwnProperty(k) && hitMap[k] > 0) ha.push({ name: k, c: hitMap[k] });
+  ha.sort(function (a, b) { return b.c - a.c; });
+  res.hits = ha.slice(0, 5);
+  res.worst = worstW > 0 ? worstMsg : null;
+  return res;
+}
+
+function diagnoseRecords(records) {
+  return diagnoseSubjects(records.map(function (r) { return r.subject; }));
+}
+
+function quoteForHour(h) {
+  if (h < 6) return '凌晨的键盘声，只有你和夜宵知道';
+  if (h < 9) return '清晨的第一行代码，比咖啡更提神';
+  if (h < 13) return '上午是你的主场，产出最稳';
+  if (h < 18) return '下午茶和 commit 更配';
+  if (h < 21) return '下班后的你，还在偷偷 Build';
+  return '深夜档 Builder，说的就是你';
+}
+
+/* ============================================================
+ * 5. 示例数据（确定性生成，兼作自检样本）
+ * ============================================================ */
+function lcg(seed) {
+  var s = seed >>> 0;
+  return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+function buildSampleLog(seed) {
+  var rnd = lcg(seed || 1024);
+  var HW = [3, 2, 2, 1, 1, 1, 2, 4, 7, 9, 10, 9, 6, 3, 8, 9, 9, 8, 6, 5, 7, 8, 8, 5];
+  var HW_SUM = 0, i;
+  for (i = 0; i < 24; i++) HW_SUM += HW[i];
+  function pickHour() {
+    var r = rnd() * HW_SUM, acc = 0;
+    for (var h = 0; h < 24; h++) { acc += HW[h]; if (r <= acc) return h; }
+    return 23;
+  }
+  var SUBJ = [
+    ['feat: 新增登录页', 8], ['fix: 修复首页白屏', 8], ['refactor: 抽离请求层', 6],
+    ['chore: 升级依赖版本', 5], ['docs: 补充 README', 5], ['test: 补充单元测试', 4],
+    ['perf: 列表改虚拟滚动', 3], ['style: 统一代码格式', 3],
+    ['feat(auth): 支持手机号登录', 4], ['fix(api): 处理超时重试', 4],
+    ['fix', 10], ['fix bug', 6], ['wip', 8], ['update', 5],
+    ['修改', 5], ['改了改', 3], ['最终版', 5], ['最终版2', 4],
+    ['真的最终版', 3], ['asdf', 3], ['test', 3], ['1', 2], ['.', 2],
+    ['重构一下', 3], ['优化', 3], ['摸鱼', 2], ['orz', 2], ['救命', 2],
+    ['init', 2], ['feat: 支持导出 PNG', 3], ['fix: 导出空白', 3]
+  ];
+  var SUBJ_SUM = 0;
+  for (i = 0; i < SUBJ.length; i++) SUBJ_SUM += SUBJ[i][1];
+  function pickSubj() {
+    var r = rnd() * SUBJ_SUM, acc = 0;
+    for (var j = 0; j < SUBJ.length; j++) { acc += SUBJ[j][1]; if (r <= acc) return SUBJ[j][0]; }
+    return SUBJ[0][0];
+  }
+  var PATHS = ['src/App.tsx', 'src/utils/request.ts', 'src/pages/Home.tsx', 'src/pages/Login.tsx',
+    'src/components/Table.tsx', 'src/components/Chart.tsx', 'README.md', 'package.json',
+    'src/styles/main.css', 'src/api/user.ts', 'tests/home.test.ts', 'src/charts/clock.ts',
+    'src/parse/gitlog.ts', 'src/render/poster.ts', 'docs/deploy.md', 'assets/logo.png'];
+  var AUTHORS = ['阿 Build', '阿 Build', '阿 Build', '阿 Build', '阿 Build', 'Lin', 'Bob'];
+
+  function hex(n) { var s = ''; for (var k = 0; k < n; k++) s += '0123456789abcdef'[Math.floor(rnd() * 16)]; return s; }
+  function fmt(d) {
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+      pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+
+  var list = [];
+  var N = 1180;
+  var start = new Date(2025, 9, 20, 8, 0, 0);
+  var end = new Date(2026, 9, 19, 23, 0, 0);
+  var span = end.getTime() - start.getTime();
+  for (i = 0; i < N; i++) {
+    var d = new Date(start.getTime() + rnd() * span);
+    d.setHours(pickHour(), Math.floor(rnd() * 60), Math.floor(rnd() * 60), 0);
+    list.push({ d: d, s: pickSubj(), a: AUTHORS[Math.floor(rnd() * AUTHORS.length)] });
+  }
+  /* 21 天连续打卡 */
+  var ss = new Date(2026, 2, 2, 10, 0, 0);
+  for (i = 0; i < 21; i++) {
+    var dd = new Date(ss.getTime() + i * 86400000);
+    dd.setHours(9 + (i % 9), (i * 7) % 60, 0, 0);
+    list.push({ d: dd, s: 'feat: 连续打卡第 ' + (i + 1) + ' 天', a: '阿 Build' });
+  }
+  /* 峰值日：14 连提 */
+  var pk = new Date(2026, 5, 18, 9, 0, 0);
+  for (i = 0; i < 14; i++) {
+    var pd = new Date(pk.getTime() + i * 1800000);
+    list.push({ d: pd, s: i === 0 ? 'feat: 大版本上线' : 'fix: 上线后修补 #' + i, a: '阿 Build' });
+  }
+  list.sort(function (a, b) { return a.d - b.d; });
+
+  var out = [];
+  for (i = 0; i < list.length; i++) {
+    var r = list[i];
+    out.push(hex(7) + '|' + fmt(r.d) + '|' + r.a + '|' + r.s);
+    if (rnd() < 0.78) {
+      var nf = 1 + Math.floor(rnd() * 3);
+      for (var f = 0; f < nf; f++) {
+        var p = PATHS[Math.floor(rnd() * PATHS.length)];
+        out.push(Math.floor(rnd() * 120) + '\t' + Math.floor(rnd() * 40) + '\t' + p);
+      }
+    }
+    if (rnd() < 0.02) out.push('-\t-\tassets/logo.png');
+    out.push('');
+  }
+  return out.join('\n');
+}
+
+/* ============================================================
+ * 6. 海报渲染（唯一真相源）
+ * ============================================================ */
+function rr(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function ellipsize(c, t, maxW) {
+  t = String(t == null ? '' : t);
+  if (c.measureText(t).width <= maxW) return t;
+  var s = t;
+  while (s.length > 1 && c.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s + '…';
+}
+
+function fcn(size, weight) { return (weight ? weight + ' ' : '') + size + 'px ' + CN_STACK; }
+function fmo(size, weight) { return (weight ? weight + ' ' : '') + size + 'px ' + MONO_STACK; }
+
+function renderPoster(c, S, o) {
+  o = o || {};
+  var th = THEMES[o.theme] || THEMES.terminal;
+  var W = POSTER_W, H = POSTER_H;
+  var nick = o.nickname || 'Builder';
+  var diag = o.diag || { score: 0, grade: GRADES[0], hits: [], worst: null };
+
+  c.save();
+  c.fillStyle = th.bg;
+  c.fillRect(0, 0, W, H);
+
+  /* 背景网格 */
+  c.strokeStyle = th.grid;
+  c.lineWidth = 1;
+  for (var gx = 0; gx <= W; gx += 60) { c.beginPath(); c.moveTo(gx + .5, 0); c.lineTo(gx + .5, H); c.stroke(); }
+  for (var gy = 0; gy <= H; gy += 60) { c.beginPath(); c.moveTo(0, gy + .5); c.lineTo(W, gy + .5); c.stroke(); }
+
+  /* 顶部强调条 */
+  c.fillStyle = th.accent;
+  c.fillRect(0, 0, W, 7);
+
+  /* ---------- 头部 ---------- */
+  c.textBaseline = 'alphabetic';
+  c.textAlign = 'left';
+  c.fillStyle = th.fg;
+  c.font = fcn(34, '700');
+  c.fillText('代码年轮 · CODE TREE RINGS', 64, 76);
+  c.textAlign = 'right';
+  c.fillStyle = th.accent;
+  c.font = fmo(28, '700');
+  c.fillText('1024 = 2¹⁰', W - 64, 76);
+  c.textAlign = 'left';
+  c.fillStyle = th.muted;
+  c.font = fcn(19);
+  c.fillText('把你的 git log 变成一张年度海报', 64, 110);
+
+  /* ---------- 身份条 ---------- */
+  c.fillStyle = th.panel;
+  rr(c, 64, 134, W - 128, 74, 14); c.fill();
+  c.strokeStyle = th.line; c.lineWidth = 1; c.stroke();
+  c.fillStyle = th.muted;
+  c.font = fcn(16);
+  c.fillText('Builder', 92, 166);
+  c.fillStyle = th.fg;
+  c.font = fcn(30, '700');
+  c.fillText(ellipsize(c, nick, 560), 92, 200);
+  c.textAlign = 'right';
+  c.fillStyle = th.muted;
+  c.font = fmo(19);
+  var range = (S.firstDate && S.lastDate)
+    ? (S.firstDate.getFullYear() + '.' + pad2(S.firstDate.getMonth() + 1) + '.' + pad2(S.firstDate.getDate()) +
+       ' → ' + S.lastDate.getFullYear() + '.' + pad2(S.lastDate.getMonth() + 1) + '.' + pad2(S.lastDate.getDate()))
+    : '时间未知';
+  c.fillText(range, W - 92, 166);
+  c.fillStyle = th.fg;
+  c.font = fmo(19);
+  c.fillText('跨度 ' + S.spanDays + ' 天 · 活跃 ' + S.activeDays + ' 天', W - 92, 200);
+  c.textAlign = 'left';
+
+  /* ---------- 段位徽章 ---------- */
+  var lv = levelFor(S.count);
+  var bw = 700, bh = 150, bx = (W - bw) / 2, by = 232;
+  c.fillStyle = th.badge;
+  rr(c, bx, by, bw, bh, 20); c.fill();
+  c.fillStyle = th.badgeFg;
+  c.textAlign = 'left';
+  c.font = fmo(20, '700');
+  c.fillText('Lv.' + lv, bx + 40, by + 46);
+  c.font = fmo(76, '700');
+  c.fillText(String(lv), bx + 40, by + 116);
+  c.textAlign = 'center';
+  c.font = fcn(36, '700');
+  c.fillText(LEVELS[lv].name, bx + bw / 2 + 40, by + 66);
+  c.font = fmo(20);
+  c.globalAlpha = .8;
+  c.fillText('2^' + lv + ' = ' + LEVELS[lv].need + '+ commits', bx + bw / 2 + 40, by + 104);
+  c.globalAlpha = 1;
+  c.textAlign = 'left';
+
+  /* ---------- 24 小时钟面 ---------- */
+  var p1 = { x: 64, y: 404, w: 520, h: 268 };
+  c.fillStyle = th.panel; rr(c, p1.x, p1.y, p1.w, p1.h, 14); c.fill();
+  c.strokeStyle = th.line; c.stroke();
+  c.fillStyle = th.muted; c.font = fcn(17, '700');
+  c.fillText('24 小时提交钟面', p1.x + 24, p1.y + 34);
+
+  var cx = p1.x + p1.w / 2, cy = p1.y + 152, R = 92, r0 = 30;
+  var maxH = 1;
+  for (var h = 0; h < 24; h++) if (S.hours[h] > maxH) maxH = S.hours[h];
+  for (var h2 = 0; h2 < 24; h2++) {
+    var ang = -Math.PI / 2 + (h2 / 24) * Math.PI * 2;
+    var v = S.hours[h2];
+    var len = r0 + 8 + (R - r0 - 8) * (v / maxH);
+    c.strokeStyle = (h2 === S.peakHour) ? th.accent : (h2 < 6 ? th.muted : th.accent2);
+    c.globalAlpha = (h2 === S.peakHour) ? 1 : (0.35 + 0.65 * (v / maxH));
+    c.lineWidth = (h2 === S.peakHour) ? 9 : 7;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+    c.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+  c.lineCap = 'butt';
+  c.fillStyle = th.muted; c.font = fmo(15);
+  c.textAlign = 'center';
+  c.fillText('0', cx, cy - R - 16);
+  c.fillText('6', cx + R + 18, cy + 5);
+  c.fillText('12', cx, cy + R + 26);
+  c.fillText('18', cx - R - 18, cy + 5);
+  c.textAlign = 'left';
+  c.fillStyle = th.fg; c.font = fmo(17, '700');
+  c.fillText('峰值 ' + pad2(S.peakHour) + ':00', p1.x + 24, p1.y + p1.h - 22);
+
+  /* ---------- 星期分布 ---------- */
+  var p2 = { x: 616, y: 404, w: 520, h: 268 };
+  c.fillStyle = th.panel; rr(c, p2.x, p2.y, p2.w, p2.h, 14); c.fill();
+  c.strokeStyle = th.line; c.stroke();
+  c.fillStyle = th.muted; c.font = fcn(17, '700');
+  c.fillText('星期分布', p2.x + 24, p2.y + 34);
+
+  var WD = ['一', '二', '三', '四', '五', '六', '日'];
+  var order = [1, 2, 3, 4, 5, 6, 0];
+  var maxW2 = 1;
+  for (var w = 0; w < 7; w++) if (S.weekdays[order[w]] > maxW2) maxW2 = S.weekdays[order[w]];
+  var bw2 = (p2.w - 48 - 6 * 12) / 7, baseY = p2.y + p2.h - 44, topY = p2.y + 62;
+  for (var b = 0; b < 7; b++) {
+    var val = S.weekdays[order[b]];
+    var hgt = (val / maxW2) * (baseY - topY);
+    var x = p2.x + 24 + b * (bw2 + 12);
+    c.fillStyle = (order[b] === 0 || order[b] === 6) ? th.accent2 : th.accent;
+    c.globalAlpha = .35 + .65 * (val / maxW2);
+    rr(c, x, baseY - Math.max(2, hgt), bw2, Math.max(2, hgt), 5); c.fill();
+    c.globalAlpha = 1;
+    c.fillStyle = th.muted; c.font = fcn(15);
+    c.textAlign = 'center';
+    c.fillText(WD[b], x + bw2 / 2, baseY + 22);
+    c.fillStyle = th.fg; c.font = fmo(14, '700');
+    c.fillText(String(val), x + bw2 / 2, baseY - Math.max(2, hgt) - 8);
+  }
+  c.textAlign = 'left';
+
+  /* ---------- 大数字 ---------- */
+  var bigN = fmtInt(S.count);
+  c.fillStyle = th.accent;
+  c.font = fmo(112, '700');
+  c.fillText(bigN, 64, 772);
+  var nW = c.measureText(bigN).width;
+  c.fillStyle = th.fg;
+  c.font = fcn(30, '700');
+  c.fillText('次提交', 64 + nW + 24, 758);
+  c.textAlign = 'right';
+  c.fillStyle = th.muted; c.font = fmo(22);
+  c.fillText('净增 +' + fmtInt(S.added) + ' 行', W - 64, 726);
+  c.fillText('删除 -' + fmtInt(S.deleted) + ' 行', W - 64, 756);
+  c.fillText('触碰 ' + fmtInt(S.fileTouched) + ' 个文件', W - 64, 786);
+  c.fillStyle = th.fg; c.font = fmo(22, '700');
+  c.fillText('Builder 指数 ' + (o.index == null ? 0 : o.index) + '/100', W - 64, 816);
+  c.textAlign = 'left';
+
+  /* ---------- 金句 ---------- */
+  c.textAlign = 'center';
+  c.fillStyle = th.fg;
+  c.font = fcn(27);
+  c.fillText('「' + quoteForHour(S.peakHour) + '」', W / 2, 872);
+  c.textAlign = 'left';
+
+  /* ---------- 动词 Top5 ---------- */
+  c.fillStyle = th.muted; c.font = fcn(17, '700');
+  c.fillText('提交动词 Top 5', 64, 926);
+  var vmax = 1;
+  for (var vi = 0; vi < S.verbs.length; vi++) if (S.verbs[vi].c > vmax) vmax = S.verbs[vi].c;
+  for (var vr = 0; vr < 5; vr++) {
+    var y = 962 + vr * 34;
+    var it = S.verbs[vr];
+    if (!it) break;
+    c.fillStyle = th.fg; c.font = fmo(20);
+    c.fillText(ellipsize(c, it.w, 150), 64, y);
+    var barX = 230, barMax = 640;
+    c.fillStyle = th.panel2;
+    rr(c, barX, y - 15, barMax, 20, 6); c.fill();
+    c.fillStyle = th.accent;
+    c.globalAlpha = .85;
+    rr(c, barX, y - 15, Math.max(6, barMax * (it.c / vmax)), 20, 6); c.fill();
+    c.globalAlpha = 1;
+    c.fillStyle = th.muted; c.font = fmo(18, '700');
+    c.fillText(String(it.c), barX + barMax + 16, y);
+  }
+
+  /* ---------- 病历本 ---------- */
+  var p3 = { x: 64, y: 1152, w: W - 128, h: 232 };
+  c.fillStyle = th.panel; rr(c, p3.x, p3.y, p3.w, p3.h, 14); c.fill();
+  c.strokeStyle = th.line; c.stroke();
+  c.fillStyle = th.muted; c.font = fcn(17, '700');
+  c.fillText('commit message 病历本', p3.x + 28, p3.y + 34);
+
+  c.fillStyle = th.fg; c.font = fmo(62, '700');
+  c.fillText(String(diag.score), p3.x + 28, p3.y + 108);
+  var scW = c.measureText(String(diag.score)).width;
+  c.fillStyle = th.muted; c.font = fcn(18);
+  c.fillText('/ 100 敷衍指数', p3.x + 28 + scW + 14, p3.y + 108);
+
+  /* 分级胶囊 */
+  var gtxt = '病情：' + diag.grade.name;
+  c.font = fcn(19, '700');
+  var gw = c.measureText(gtxt).width + 36;
+  c.fillStyle = th.accent2;
+  rr(c, p3.x + 28, p3.y + 126, gw, 38, 19); c.fill();
+  c.fillStyle = th.bg; c.textAlign = 'center';
+  c.fillText(gtxt, p3.x + 28 + gw / 2, p3.y + 152);
+  c.textAlign = 'left';
+
+  /* 病种 */
+  c.font = fcn(18);
+  var dy = p3.y + 108;
+  if (diag.hits && diag.hits.length) {
+    for (var hi = 0; hi < Math.min(3, diag.hits.length); hi++) {
+      var hit = diag.hits[hi];
+      c.fillStyle = th.muted;
+      c.fillText('· ' + hit.name, 470, dy);
+      c.textAlign = 'right';
+      c.fillStyle = th.accent2; c.font = fmo(18, '700');
+      c.fillText('×' + hit.c, p3.x + p3.w - 28, dy);
+      c.textAlign = 'left';
+      c.font = fcn(18);
+      dy += 34;
+    }
+  } else {
+    c.fillStyle = th.muted;
+    c.fillText('· 暂无典型病症，命名很健康', 470, dy);
+    dy += 34;
+  }
+
+  /* 最该被枪毙的那条 */
+  c.fillStyle = th.muted; c.font = fcn(17);
+  c.fillText('最该被枪毙的那条：', p3.x + 28, p3.y + 196);
+  c.fillStyle = th.fg; c.font = fmo(20);
+  c.fillText(ellipsize(c, diag.worst || '（没有，你很健康）', p3.w - 260), p3.x + 190, p3.y + 196);
+
+  /* ---------- 结尾 ---------- */
+  c.textAlign = 'center';
+  c.fillStyle = th.fg;
+  c.font = fcn(30, '700');
+  c.fillText('1024 = 2¹⁰ —— 你已经写到了第 ' + S.count + ' 圈年轮', W / 2, 1432);
+  c.fillStyle = th.accent;
+  c.font = fmo(26, '700');
+  c.fillText('#1024Builder作品秀', W / 2, 1490);
+  c.fillStyle = th.muted;
+  c.font = fcn(16);
+  c.fillText('代码年轮 · Code Tree Rings ｜ 数据全程留在你的浏览器里', W / 2, 1536);
+  c.textAlign = 'left';
+
+  /* ---------- 烟花 ---------- */
+  var celebrate = (S.count >= 1024) || o.forceParty === true;
+  if (celebrate) {
+    var fr = lcg(20261024);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (var f = 0; f < 16; f++) {
+      var rx = 120 + fr() * (W - 240);
+      var ry = 260 + fr() * 460;
+      var hue = 90 + fr() * 160;
+      var cnt = 70 + Math.floor(fr() * 60);
+      for (var s = 0; s < cnt; s++) {
+        var a2 = fr() * Math.PI * 2;
+        var sp = 1 + fr() * 4.6;
+        var px = rx + Math.cos(a2) * sp * 7;
+        var py = ry + Math.sin(a2) * sp * 7;
+        c.globalAlpha = .55 * (1 - sp / 6);
+        c.fillStyle = 'hsl(' + hue + ',85%,62%)';
+        c.beginPath();
+        c.arc(px, py, 1.4 + fr() * 1.6, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+    c.restore();
+    c.save();
+    c.globalAlpha = .92;
+    c.fillStyle = th.badge;
+    rr(c, W / 2 - 150, 1392, 300, 54, 27); c.fill();
+    c.fillStyle = th.badgeFg;
+    c.font = fcn(26, '700');
+    c.textAlign = 'center';
+    c.fillText('🎉 1024 达成 🎉', W / 2, 1427);
+    c.textAlign = 'left';
+    c.restore();
+  }
+
+  c.restore();
+}
+
+/* ============================================================
+ * 7. 应用状态与 UI
+ * ============================================================ */
+var state = {
+  records: [], stats: null, diag: null, index: 0,
+  theme: 'terminal', filter: '12m', nickname: '', manual: false
+};
+
+function setMsg(id, kind, text) {
+  var m = $(id);
+  if (!m) return;
+  m.className = 'msg show ' + kind;
+  m.textContent = text;
+}
+function hideMsg(id) { var m = $(id); if (m) m.className = 'msg'; }
+
+function filterRecords(records, mode) {
+  if (mode === 'all') return records.slice();
+  var now = new Date();
+  if (mode === '12m') {
+    var cut = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    return records.filter(function (r) { return !r.date || r.date >= cut; });
+  }
+  var y = parseInt(mode, 10);
+  if (isNaN(y)) return records.slice();
+  return records.filter(function (r) { return r.date && r.date.getFullYear() === y; });
+}
+
+function authorNickname(records) {
+  var m = {}, best = '', bc = 0;
+  for (var i = 0; i < records.length; i++) {
+    var a = (records[i].author || '').trim();
+    if (!a) continue;
+    m[a] = (m[a] || 0) + 1;
+    if (m[a] > bc) { bc = m[a]; best = a; }
+  }
+  return best;
+}
+
+function renderChips() {
+  var box = $('yearChips');
+  if (!box) return;
+  box.innerHTML = '';
+  var defs = [{ k: '12m', t: '最近 12 个月' }, { k: 'all', t: '全部时间' }];
+  var ys = (state.stats && state.stats.years) || [];
+  for (var i = 0; i < ys.length; i++) defs.push({ k: String(ys[i]), t: ys[i] + ' 年' });
+  for (var j = 0; j < defs.length; j++) {
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = defs[j].t;
+    b.setAttribute('aria-pressed', String(state.filter === defs[j].k));
+    b.setAttribute('data-k', defs[j].k);
+    b.onclick = function () {
+      state.filter = this.getAttribute('data-k');
+      renderChips();
+      refresh();
+    };
+    box.appendChild(b);
+  }
+}
+
+function renderStats() {
+  var box = $('statBox');
+  var S = state.stats;
+  if (!S || !S.count) {
+    box.innerHTML = '<p class="hint">还没有数据。粘贴 git log，或点「载入示例年度」先看看效果。</p>';
+    return;
+  }
+  var lv = levelFor(S.count);
+  var topDay = S.topDay ? (S.topDay.d + '（' + S.topDay.c + ' 次）') : '—';
+  var files = S.files.length ? S.files.map(function (f) { return f.p + ' ×' + f.c; }).join('<br>') : '—';
+  var verbs = S.verbs.length ? S.verbs.map(function (v) { return v.w + ' ×' + v.c; }).join('<br>') : '—';
+  box.innerHTML =
+    '<div class="rank"><span class="lv">Lv.' + lv + '</span>' +
+    '<span><span class="tt">' + LEVELS[lv].name + '</span><br>' +
+    '<span class="sub">2^' + lv + ' = ' + LEVELS[lv].need + '+ commits</span></span></div>' +
+    '<div class="stats">' +
+    stat('总提交数', fmtInt(S.count), true) +
+    stat('活跃天数', fmtInt(S.activeDays)) +
+    stat('跨度', S.spanDays + ' 天') +
+    stat('最长连续', S.streak + ' 天') +
+    stat('Builder 指数', state.index + '/100', true) +
+    stat('深夜指数（0–6 点）', Math.round(S.nightRatio * 100) + '%') +
+    stat('周末战士指数', Math.round(S.weekendRatio * 100) + '%') +
+    stat('净增 / 删除', '+' + fmtInt(S.added) + ' / -' + fmtInt(S.deleted)) +
+    stat('触碰文件', fmtInt(S.fileTouched) + ' 个') +
+    stat('提交最多的一天', topDay, false, true) +
+    stat('峰值时段', pad2(S.peakHour) + ':00') +
+    stat('未知日期', fmtInt(S.undated) + ' 条') +
+    '</div>' +
+    '<div class="grid2" style="margin-top:12px">' +
+    '<div><label class="fld">最常改的文件 Top 5</label><div class="mono" style="font-size:12.5px;color:var(--muted);line-height:1.9">' + files + '</div></div>' +
+    '<div><label class="fld">提交动词 Top 5</label><div class="mono" style="font-size:12.5px;color:var(--muted);line-height:1.9">' + verbs + '</div></div>' +
+    '</div>';
+
+  function stat(k, v, acc, sm) {
+    return '<div class="stat"><div class="k">' + k + '</div><div class="v' + (acc ? ' acc' : '') + (sm ? ' sm' : '') + '">' + v + '</div></div>';
+  }
+}
+
+function renderDiag() {
+  var box = $('diagBox');
+  var d = state.diag;
+  if (!d || !d.n) {
+    box.innerHTML = '<p class="hint">暂无诊断数据。</p>';
+    return;
+  }
+  var hits = d.hits.length
+    ? d.hits.map(function (h) { return '<div class="disease"><span>' + h.name + '</span><span class="c">×' + h.c + '</span></div>'; }).join('')
+    : '<div class="disease"><span>暂无典型病症</span><span class="c">健康</span></div>';
+  box.innerHTML =
+    '<div class="rank"><span class="lv">' + d.score + '</span>' +
+    '<span><span class="tt">敷衍指数 / 100</span><br>' +
+    '<span class="sub">共 ' + d.n + ' 条 message ｜ 病情：' + d.grade.name + '</span></span></div>' +
+    hits +
+    (d.worst ? '<div class="worst">最该被枪毙的那条：<b>' + escapeHtml(d.worst) + '</b></div>' : '');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function renderBoard() {
+  var box = $('boardBox');
+  var list = loadBoard();
+  if (!list.length) { box.innerHTML = ''; return; }
+  var html = '<label class="fld" style="margin-top:14px">本地排行榜（只存在你的浏览器里，清缓存即消失）</label><ol class="board">';
+  for (var i = 0; i < list.length; i++) {
+    html += '<li>' + escapeHtml(list[i].name) + ' — <b>' + list[i].score + '</b> 分 · ' + escapeHtml(list[i].grade) + '</li>';
+  }
+  html += '</ol>';
+  box.innerHTML = html;
+}
+
+function loadBoard() {
+  try {
+    var raw = localStorage.getItem('ctr-board');
+    var a = raw ? JSON.parse(raw) : [];
+    return Array.isArray(a) ? a : [];
+  } catch (e) { return []; }
+}
+function saveBoard(name, score, grade) {
+  var a = loadBoard();
+  a.unshift({ name: name, score: score, grade: grade, ts: Date.now() });
+  a = a.slice(0, 20);
+  try { localStorage.setItem('ctr-board', JSON.stringify(a)); } catch (e) { /* 隐私模式下忽略 */ }
+}
+
+function paint() {
+  var c = $('poster').getContext('2d');
+  var S = state.stats || computeStats([]);
+  renderPoster(c, S, {
+    theme: state.theme,
+    nickname: state.nickname,
+    diag: state.diag || { score: 0, grade: GRADES[0], hits: [], worst: null },
+    index: state.index
+  });
+  var b = $('p1024');
+  if (b) b.classList.toggle('hidden', !(S.count >= 1024));
+}
+
+function refresh() {
+  var S = computeStats(filterRecords(state.records, state.filter));
+  state.stats = S;
+  state.diag = diagnoseRecords(filterRecords(state.records, state.filter));
+  state.index = builderIndex(S, state.diag.score);
+  var auto = authorNickname(state.records) || 'Builder';
+  if (!state.nickname || state.nickname === state._autoNick) {
+    state.nickname = auto;
+    state._autoNick = auto;
+    $('nickname').value = auto;
+  }
+  renderStats();
+  renderDiag();
+  renderChips();
+  paint();
+}
+
+/* ---------- 导出 ---------- */
+function exportPng() {
+  var msg = $('exportMsg');
+  try {
+    var S = state.stats || computeStats([]);
+    var off = document.createElement('canvas');
+    off.width = POSTER_W * 2;
+    off.height = POSTER_H * 2;
+    var oc = off.getContext('2d');
+    oc.scale(2, 2);
+    renderPoster(oc, S, {
+      theme: state.theme, nickname: state.nickname,
+      diag: state.diag || { score: 0, grade: GRADES[0], hits: [], worst: null },
+      index: state.index
+    });
+    var done = function (blob) {
+      if (!blob || blob.size < 5000) { setMsg('exportMsg', 'err', '导出失败：图片是空的（size=' + (blob ? blob.size : 0) + '）。请换 Chrome/Edge 试试，或直接用页面右键「图片另存为」。'); return; }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '代码年轮-' + (state.nickname || 'Builder') + '-' + S.count + 'commits.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      setMsg('exportMsg', 'ok', '已导出 ' + POSTER_W * 2 + '×' + POSTER_H * 2 + ' PNG（' + Math.round(blob.size / 1024) + ' KB）。');
+    };
+    if (off.toBlob) off.toBlob(done, 'image/png');
+    else done(null);
+  } catch (e) {
+    setMsg('exportMsg', 'err', '导出出错：' + (e && e.message ? e.message : e));
+  }
+}
+
+/* ---------- 事件绑定 ---------- */
+function bind() {
+  /* 命令 tabs */
+  var tabs = $('cmdTabs').querySelectorAll('.tab');
+  var cur = 'full';
+  function showCmd() {
+    $('cmdBox').textContent = COMMANDS[cur];
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].setAttribute('aria-selected', String(tabs[i].getAttribute('data-cmd') === cur));
+    }
+  }
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].onclick = function () { cur = this.getAttribute('data-cmd'); showCmd(); };
+  }
+  showCmd();
+
+  $('btnCopy').onclick = function () {
+    var txt = COMMANDS[cur];
+    var ok = function () { setMsg('parseMsg', 'ok', '命令已复制，去仓库目录粘贴执行，再把输出粘回来。'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(ok, function () { fallbackCopy(txt); ok(); });
+    } else { fallbackCopy(txt); ok(); }
+  };
+
+  $('btnClear').onclick = function () {
+    $('logInput').value = '';
+    hideMsg('parseMsg');
+  };
+
+  $('btnSample').onclick = function () {
+    $('logInput').value = buildSampleLog(1024);
+    hideMsg('parseMsg');
+    generate();
+  };
+
+  $('btnDownloadSample').onclick = function () {
+    var blob = new Blob([buildSampleLog(1024)], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample-gitlog.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    setMsg('parseMsg', 'ok', '已下载 sample-gitlog.txt，可以拖回输入框试试「拖入文件」这条路。');
+  };
+
+  $('btnGen').onclick = generate;
+
+  $('btnRepaint').onclick = paint;
+  $('btnExport').onclick = exportPng;
+
+  /* 配色 */
+  var sws = $('palSel').querySelectorAll('.sw');
+  for (var s = 0; s < sws.length; s++) {
+    sws[s].onclick = function () {
+      state.theme = this.getAttribute('data-theme');
+      for (var j = 0; j < sws.length; j++) sws[j].setAttribute('aria-pressed', String(sws[j] === this));
+      paint();
+    };
+  }
+
+  /* 昵称 */
+  $('nickname').oninput = function () {
+    var v = this.value.trim();
+    state.nickname = v;
+    if (v) state._autoNick = null;
+    paint();
+  };
+
+  /* 拖放 */
+  var ta = $('logInput'), dz = $('dropZone');
+  ta.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('over'); });
+  ta.addEventListener('dragleave', function () { dz.classList.remove('over'); });
+  ta.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dz.classList.remove('over');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      ta.value = String(rd.result || '');
+      setMsg('parseMsg', 'ok', '已读入 ' + f.name + '，点「生成我的年轮」。');
+    };
+    rd.onerror = function () { setMsg('parseMsg', 'err', '文件读取失败，请改用粘贴。'); };
+    rd.readAsText(f);
+  });
+
+  /* 病历本独立输入 */
+  $('btnDiag').onclick = function () {
+    var lines = $('msgInput').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!lines.length) { setMsg('parseMsg', 'warn', '先粘几条 commit message。'); return; }
+    var d = diagnoseSubjects(lines);
+    state.diag = d;
+    renderDiag();
+    paint();
+    setMsg('parseMsg', 'ok', '诊断完成：敷衍指数 ' + d.score + '（' + d.grade.name + '）。');
+  };
+  $('btnSaveBoard').onclick = function () {
+    var d = state.diag;
+    if (!d || !d.n) { setMsg('parseMsg', 'warn', '先诊断一批 message。'); return; }
+    var nm = ($('nickname').value || '').trim() || '匿名 Builder';
+    saveBoard(nm, d.score, d.grade.name);
+    renderBoard();
+    setMsg('parseMsg', 'ok', '已存入本地排行榜。');
+  };
+
+  /* 手动填数 */
+  $('btnManual').onclick = function () {
+    var cnt = parseInt(($('mCount').value || '').replace(/[^\d]/g, ''), 10);
+    var days = parseInt(($('mDays').value || '').replace(/[^\d]/g, ''), 10);
+    var streak = parseInt(($('mStreak').value || '').replace(/[^\d]/g, ''), 10);
+    var peak = ($('mPeak').value || '').trim();
+    if (!cnt || cnt < 1) { setMsg('parseMsg', 'warn', '填一下总提交数（≥1）。'); return; }
+    state.manual = true;
+    state.records = [];
+    var S = computeStats([]);
+    S.count = cnt;
+    S.dated = cnt;
+    S.undated = 0;
+    S.activeDays = days || cnt;
+    S.spanDays = Math.max(1, days || cnt);
+    S.streak = streak || 0;
+    S.hours = new Array(24).fill(0);
+    var ph = 10;
+    if (/深夜|凌晨/.test(peak)) ph = 2;
+    else if (/上午|早上|清晨/.test(peak)) ph = 10;
+    else if (/下午|午后/.test(peak)) ph = 15;
+    else if (/晚|夜/.test(peak)) ph = 22;
+    S.peakHour = ph;
+    S.hours[ph] = cnt;
+    S.nightRatio = ph < 6 ? 1 : 0;
+    S.weekendRatio = 0.2;
+    S.firstDate = null; S.lastDate = null;
+    S.topDay = null;
+    state.stats = S;
+    state.diag = { n: 0, score: 0, grade: GRADES[0], hits: [], worst: null, density: 0 };
+    state.index = builderIndex(S, 0);
+    if (!state.nickname) state.nickname = 'Builder';
+    renderStats(); renderDiag(); renderChips(); paint();
+    setMsg('parseMsg', 'ok', '已用手动数据生成（提交数 ' + cnt + '，段位 Lv.' + levelFor(cnt) + '）。');
+  };
+}
+
+function fallbackCopy(txt) {
+  var ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+
+function generate() {
+  var text = $('logInput').value || '';
+  var res = parseGitLog(text);
+  if (!res.records.length) {
+    setMsg('parseMsg', 'err', '没识别出任何提交记录。请确认粘的是 git log 的输出；可以点上面的「复制命令」重新导出一份，或先「载入示例年度」看看格式。');
+    return;
+  }
+  state.manual = false;
+  state.records = res.records;
+  state.filter = '12m';
+  hideMsg('parseMsg');
+  refresh();
+  setMsg('parseMsg', 'ok', '识别到 ' + fmtInt(res.records.length) + ' 条提交' +
+    (res.truncated ? '（超过 ' + MAX_RECORDS + ' 条，已截断）' : '') +
+    '，段位 Lv.' + levelFor(state.stats.count) + ' · ' + LEVELS[levelFor(state.stats.count)].name + '。');
+}
+
+/* ============================================================
+ * 8. 内置自检
+ * ============================================================ */
+function runSelfTest() {
+  var T = [];
+  function t(name, fn) {
+    try {
+      var r = fn();
+      /* 只在抛错、或显式返回 false 时判失败，其余一律通过 */
+      var pass = (r !== false);
+      T.push({ name: name, ok: pass, msg: pass ? '' : '断言返回 false' });
+    } catch (e) {
+      T.push({ name: name, ok: false, msg: String((e && e.message) || e) });
+    }
+  }
+  function eq(a, b) { if (a !== b) throw new Error('期望 ' + b + '，实际 ' + a); return true; }
+  function near(a, b, tol) { if (Math.abs(a - b) > (tol || 0)) throw new Error('期望 ≈' + b + '，实际 ' + a); return true; }
+  function ok(cond, m) { if (!cond) throw new Error(m || '断言失败'); return true; }
+
+  /* ---- 解析器 ---- */
+  t('解析：自定义格式·含时分秒', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:30:45|Alice|feat: add login\n9f8e7d6|2026-10-19 09:00:00|Bob|fix: typo');
+    eq(r.records.length, 2);
+    eq(r.records[0].hash, 'a1b2c3d');
+    eq(r.records[0].subject, 'feat: add login');
+    eq(r.records[0].author, 'Alice');
+    ok(r.records[0].date && r.records[0].date.getHours() === 10, '小时应为 10');
+    ok(r.records[0].date && r.records[0].date.getMinutes() === 30, '分钟应为 30');
+    eq(r.records[1].author, 'Bob');
+    return true;
+  });
+  t('解析：自定义格式·仅日期', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20|Alice|feat: add login');
+    eq(r.records.length, 1);
+    ok(r.records[0].date && r.records[0].date.getFullYear() === 2026, '年份应为 2026');
+    ok(r.records[0].date && r.records[0].date.getHours() === 0, '无时间应为 00:00');
+    return true;
+  });
+  t('解析：--oneline', function () {
+    var r = parseGitLog('a1b2c3d feat: add login\n9f8e7d6 fix: typo');
+    eq(r.records.length, 2);
+    eq(r.records[0].subject, 'feat: add login');
+    eq(r.records[0].date, null);
+    return true;
+  });
+  t('解析：git 默认格式', function () {
+    var txt = 'commit a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0\n' +
+      'Author: Alice <alice@example.com>\n' +
+      'Date:   Tue Oct 20 10:30:45 2026 +0800\n' +
+      '\n' +
+      '    feat: add login\n' +
+      '\n' +
+      '    body line 1\n' +
+      '\n' +
+      'commit 9f8e7d6c5b4a39281706f5e4d3c2b1a0987654321\n' +
+      'Author: Bob <bob@example.com>\n' +
+      'Date:   Mon Oct 19 09:00:00 2026 +0800\n' +
+      '\n' +
+      '    fix: typo\n';
+    var r = parseGitLog(txt);
+    eq(r.records.length, 2);
+    eq(r.records[0].author, 'Alice');
+    eq(r.records[0].subject, 'feat: add login');
+    eq(r.records[0].body, 'body line 1');
+    ok(r.records[0].date && r.records[0].date.getFullYear() === 2026, '日期应解析成功');
+    eq(r.records[1].subject, 'fix: typo');
+    return true;
+  });
+  t('解析：numstat 增删行与文件', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|feat: x\n12\t3\tsrc/a.js\n5\t0\tsrc/b.js');
+    eq(r.records[0].added, 17);
+    eq(r.records[0].deleted, 3);
+    eq(r.records[0].files.length, 2);
+    eq(r.records[0].files[0], 'src/a.js');
+    return true;
+  });
+  t('解析：numstat 二进制文件记 -', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|chore: logo\n-\t-\tassets/logo.png');
+    eq(r.records[0].added, 0);
+    eq(r.records[0].deleted, 0);
+    eq(r.records[0].files.length, 1);
+    return true;
+  });
+  t('解析：重命名归一化 old => new', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|refactor: move\n1\t1\tsrc/{old => new}/a.js');
+    eq(r.records[0].files[0], 'src/new/a.js');
+    return true;
+  });
+  t('解析：CRLF 换行', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20 10:00:00|Alice|feat: x\r\n9f8e7d6|2026-10-19 10:00:00|Bob|fix: y\r\n');
+    eq(r.records.length, 2);
+    eq(r.records[1].subject, 'fix: y');
+    return true;
+  });
+  t('解析：空输入返回 0 条', function () {
+    eq(parseGitLog('').records.length, 0);
+    eq(parseGitLog(null).records.length, 0);
+    eq(parseGitLog('   \n\n  \n').records.length, 0);
+    return true;
+  });
+  t('解析：纯垃圾输入返回 0 条', function () {
+    eq(parseGitLog('hello world\n这是一段普通文字\n12345').records.length, 0);
+    return true;
+  });
+  t('解析：分隔符容忍 ; , tab', function () {
+    eq(parseGitLog('a1b2c3d;2026-10-20;Alice;feat: x').records.length, 1);
+    eq(parseGitLog('a1b2c3d,2026-10-20,Alice,feat: x').records.length, 1);
+    eq(parseGitLog('a1b2c3d\t2026-10-20\tAlice\tfeat: x').records.length, 1);
+    return true;
+  });
+  t('解析：subject 含分隔符时保留', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20|Alice|feat: a|b|c');
+    eq(r.records[0].subject, 'feat: a|b|c');
+    return true;
+  });
+  t('解析：多仓库输出直接拼接', function () {
+    var r = parseGitLog('a1b2c3d|2026-10-20|Alice|feat: x\n9f8e7d6|2026-10-19|Bob|fix: y');
+    eq(r.records.length, 2);
+    return true;
+  });
+  t('解析：注释行被忽略（含 #1024）', function () {
+    var r = parseGitLog('# 这是说明\na1b2c3d|2026-10-20|Alice|feat: x\n#1024 达成\n#123 是 issue 引用不算');
+    eq(r.records.length, 1);
+    eq(r.records[0].subject, 'feat: x');
+    return true;
+  });
+  t('解析：20000 条上限截断', function () {
+    var big = [];
+    for (var i = 0; i < 20050; i++) big.push('a1b2c3d|2026-10-20|Alice|feat: ' + i);
+    var r = parseGitLog(big.join('\n'));
+    eq(r.records.length, 20000);
+    ok(r.truncated === true, '应标记截断');
+    return true;
+  });
+
+  /* ---- 统计 ---- */
+  var FIX = parseGitLog(
+    'a1b2c3d|2026-10-01 01:00:00|A|feat: a\n5\t2\tsrc/a.js\n' +
+    'a1b2c3e|2026-10-02 02:30:00|A|fix: b\n3\t1\tsrc/a.js\n' +
+    'a1b2c3f|2026-10-03 03:00:00|B|feat: c\n1\t0\tsrc/b.js\n' +
+    'a1b2c40|2026-10-04 23:00:00|A|wip\n0\t0\tsrc/c.js\n' +
+    'a1b2c41|2026-10-06 10:00:00|B|feat: d\n2\t2\tsrc/b.js'
+  ).records;
+  var FS = computeStats(FIX);
+  t('统计：总提交数', function () { eq(FS.count, 5); return true; });
+  t('统计：小时桶正确', function () {
+    eq(FS.hours[1], 1); eq(FS.hours[2], 1); eq(FS.hours[3], 1);
+    eq(FS.hours[23], 1); eq(FS.hours[10], 1);
+    return true;
+  });
+  t('统计：深夜指数（0–6 点）', function () { near(FS.nightRatio, 3 / 5, 1e-9); return true; });
+  t('统计：活跃天数与跨度', function () { eq(FS.activeDays, 5); eq(FS.spanDays, 6); return true; });
+  t('统计：最长连续提交', function () { eq(FS.streak, 4); return true; });
+  t('统计：峰值时段', function () { ok(FS.hours[FS.peakHour] >= 1, '峰值应存在'); return true; });
+  t('统计：文件 Top', function () {
+    eq(FS.files[0].p, 'src/a.js');
+    eq(FS.files[0].c, 2);
+    return true;
+  });
+  t('统计：增删行合计', function () { eq(FS.added, 11); eq(FS.deleted, 5); return true; });
+  t('统计：未知日期计入总数', function () {
+    var r = parseGitLog('a1b2c3d feat: x\n9f8e7d6 fix: y');
+    var s = computeStats(r.records);
+    eq(s.count, 2); eq(s.undated, 2); eq(s.dated, 0);
+    return true;
+  });
+
+  /* ---- 段位 ---- */
+  t('段位：边界值全部正确', function () {
+    var exp = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+    for (var i = 0; i < exp.length; i++) eq(levelFor(exp[i]), i);
+    eq(levelFor(0), 0);
+    eq(levelFor(3), 1);
+    eq(levelFor(7), 2);
+    eq(levelFor(1023), 9);
+    eq(levelFor(1025), 10);
+    eq(levelFor(99999), 10);
+    return true;
+  });
+  t('Builder 指数：健康作息接近 100', function () {
+    var S = { spanDays: 365, activeDays: 365, streak: 60, nightRatio: 0 };
+    near(builderIndex(S, 0), 100, 1);
+    return true;
+  });
+  t('Builder 指数：全深夜低活跃接近低位', function () {
+    var S = { spanDays: 365, activeDays: 10, streak: 1, nightRatio: 1 };
+    var v = builderIndex(S, 100);
+    ok(v >= 0 && v <= 30, '应在 0–30，实际 ' + v);
+    return true;
+  });
+
+  /* ---- 病历本 ---- */
+  t('病历：裸 fix ≈ 60 分', function () {
+    var d = diagnoseSubjects(['fix', 'fix', 'fix', 'fix']);
+    ok(d.score >= 55 && d.score <= 65, '实际 ' + d.score);
+    return true;
+  });
+  t('病历：conventional 格式的 fix 优于裸 fix', function () {
+    /* 设计意图：符合 conventional 规范（fix(api): …）比裸写 fix 更健康，
+       前者拿到「建设性人格」加分，后者全额计入「修补依赖症」。 */
+    var bare = diagnoseSubjects(['fix', 'fix', 'fix', 'fix']).score;
+    var conv = diagnoseSubjects(['fix(api): a', 'fix(api): b', 'fix(api): c', 'fix(api): d']).score;
+    ok(conv < bare, 'conventional ' + conv + ' 应低于裸写 ' + bare);
+    return true;
+  });
+  t('病历：全「最终版」≈ 84 分', function () {
+    var d = diagnoseSubjects(['最终版', '最终版', '真的最终版', '最终版2']);
+    ok(d.score >= 79 && d.score <= 89, '实际 ' + d.score);
+    return true;
+  });
+  t('病历：规范 conventional 提交 0 分', function () {
+    var d = diagnoseSubjects(['feat: a', 'fix(api): b', 'docs: c', 'refactor: d']);
+    eq(d.score, 0);
+    return true;
+  });
+  t('病历：各规则可被触发', function () {
+    var d = diagnoseSubjects(['wip', 'asdf', '123', 'update', '摸鱼', 'orz', '重构一下']);
+    ok(d.score > 50, '应 >50，实际 ' + d.score);
+    ok(d.hits.length >= 4, '至少命中 4 类，实际 ' + d.hits.length);
+    ok(!!d.worst, '应选出最烂的一条');
+    return true;
+  });
+  t('病历：空输入安全', function () {
+    var d = diagnoseSubjects([]);
+    eq(d.n, 0); eq(d.score, 0);
+    return true;
+  });
+
+  /* ---- 示例数据 ---- */
+  t('示例：可解析且规模足够', function () {
+    var log = buildSampleLog(1024);
+    var r = parseGitLog(log);
+    ok(r.records.length >= 1100, '应 ≥1100，实际 ' + r.records.length);
+    var s = computeStats(r.records);
+    ok(s.dated > 1000, '应有日期，实际 ' + s.dated);
+    ok(s.count >= 1024, '应达到满级彩蛋阈值，实际 ' + s.count);
+    eq(levelFor(s.count), 10);
+    ok(s.added > 0 && s.deleted > 0, '应有增删行');
+    return true;
+  });
+  t('示例：确定性（同种子同结果）', function () {
+    eq(buildSampleLog(1024), buildSampleLog(1024));
+    return true;
+  });
+  t('示例：含 21 天连续打卡', function () {
+    var s = computeStats(parseGitLog(buildSampleLog(1024)).records);
+    ok(s.streak >= 21, '应 ≥21，实际 ' + s.streak);
+    return true;
+  });
+
+  /* ---- 海报与导出 ---- */
+  t('海报：三种配色均不抛错', function () {
+    var c = document.createElement('canvas').getContext('2d');
+    var themes = ['terminal', 'warm', 'mono'];
+    for (var i = 0; i < themes.length; i++) {
+      renderPoster(c, FS, { theme: themes[i], nickname: '自检', diag: diagnoseSubjects(['fix: a']), index: 66 });
+    }
+    return true;
+  });
+  t('海报：零数据与满级数据均不抛错', function () {
+    var c = document.createElement('canvas').getContext('2d');
+    renderPoster(c, computeStats([]), { theme: 'terminal', nickname: '', diag: { score: 0, grade: GRADES[0], hits: [], worst: null }, index: 0 });
+    var big = computeStats(parseGitLog(buildSampleLog(1024)).records);
+    renderPoster(c, big, { theme: 'warm', nickname: '阿 Build', diag: diagnoseRecords(parseGitLog(buildSampleLog(1024)).records), index: 88 });
+    return true;
+  });
+  t('导出：离屏画布尺寸与像素非空', function () {
+    var off = document.createElement('canvas');
+    off.width = POSTER_W * 2; off.height = POSTER_H * 2;
+    var oc = off.getContext('2d');
+    oc.scale(2, 2);
+    renderPoster(oc, FS, { theme: 'terminal', nickname: '自检', diag: diagnoseSubjects(['fix: a']), index: 66 });
+    eq(off.width, 2400); eq(off.height, 3200);
+    /* 取 4 个采样点，确认真的画上了东西（不是空白画布） */
+    var pts = [[1200, 800], [1200, 1600], [600, 2000], [1800, 1000]];
+    var inked = 0;
+    for (var i = 0; i < pts.length; i++) {
+      var d = oc.getImageData(pts[i][0], pts[i][1], 1, 1).data;
+      if (d[3] > 0) inked++;
+    }
+    ok(inked === pts.length, '4 个采样点应全部有像素，实际 ' + inked);
+    return true;
+  });
+  t('导出：toBlob 可用且回调非空', function () {
+    var off = document.createElement('canvas');
+    off.width = 200; off.height = 200;
+    var oc = off.getContext('2d');
+    oc.fillStyle = '#22C55E';
+    oc.fillRect(0, 0, 200, 200);
+    ok(typeof off.toBlob === 'function', '当前环境应支持 toBlob');
+    ok(typeof URL.createObjectURL === 'function', '当前环境应支持 createObjectURL');
+    ok(typeof document.createElement('a').click === 'function', '当前环境应支持 a.click');
+    return true;
+  });
+  t('过滤：12 个月 / 全年 / 单年', function () {
+    var rs = parseGitLog(
+      'a1b2c3d|2026-10-20 10:00:00|A|feat: a\n' +
+      'b1b2c3d|2024-01-05 10:00:00|A|feat: old\n' +
+      'c1b2c3d|2026-05-05 10:00:00|A|feat: mid'
+    ).records;
+    eq(filterRecords(rs, 'all').length, 3);
+    eq(filterRecords(rs, '2026').length, 2);
+    eq(filterRecords(rs, '2024').length, 1);
+    ok(filterRecords(rs, '12m').length >= 2, '12 个月应含今年的记录');
+    return true;
+  });
+
+  /* 渲染结果 */
+  var pass = 0, i;
+  for (i = 0; i < T.length; i++) if (T[i].ok) pass++;
+  var body = $('stBody');
+  body.innerHTML = '';
+  for (i = 0; i < T.length; i++) {
+    var tr = document.createElement('tr');
+    if (!T[i].ok) tr.className = 'fail';
+    var c0 = document.createElement('td'); c0.textContent = String(i + 1);
+    var c1 = document.createElement('td'); c1.textContent = T[i].name;
+    var c2 = document.createElement('td'); c2.className = 'r'; c2.textContent = T[i].ok ? 'PASS' : 'FAIL';
+    var c3 = document.createElement('td'); c3.className = 'r'; c3.textContent = T[i].msg || '';
+    tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+    body.appendChild(tr);
+  }
+  var sum = $('stSummary');
+  sum.className = (pass === T.length) ? 'pass' : 'fail';
+  sum.textContent = '共 ' + T.length + ' 条断言，通过 ' + pass + ' 条，失败 ' + (T.length - pass) + ' 条。';
+}
+
+/* ============================================================
+ * 9. 启动
+ * ============================================================ */
+function boot() {
+  var isTest = /[?&]selftest=1\b/.test(location.search);
+  if (isTest) {
+    document.querySelector('.wrap').classList.add('hidden');
+    $('selftest').classList.remove('hidden');
+    runSelfTest();
+    return;
+  }
+  bind();
+  renderBoard();
+  $('logInput').value = buildSampleLog(1024);
+  generate();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+
+/* 暴露内部函数，便于命令行测试（node verify.js / node e2e.js）。
+   浏览器中同样可用，无副作用。 */
+if (typeof globalThis !== 'undefined') {
+  globalThis.__CTR__ = {
+    parseGitLog: parseGitLog,
+    computeStats: computeStats,
+    levelFor: levelFor,
+    builderIndex: builderIndex,
+    diagnoseSubjects: diagnoseSubjects,
+    diagnoseRecords: diagnoseRecords,
+    renderPoster: renderPoster,
+    filterRecords: filterRecords,
+    buildSampleLog: buildSampleLog,
+    runSelfTest: runSelfTest,
+    LEVELS: LEVELS,
+    GRADES: GRADES,
+    MAX_RECORDS: MAX_RECORDS,
+    POSTER_W: POSTER_W,
+    POSTER_H: POSTER_H
+  };
+}
+
+})();
+</script>
+</body>
+</html>

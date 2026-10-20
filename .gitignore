@@ -1,0 +1,13 @@
+# ACL 诊断工具留下的备份与报告，不应进入版本库
+.acl-recovery/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 依赖与产物
+node_modules/
+*.log
