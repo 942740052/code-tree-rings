@@ -579,6 +579,56 @@ function utf16ToString(s, littleEndian) {
 }
 
 /**
+ * 读取文件字节并按 BOM 判断编码转成文本。
+ * Windows PowerShell 的 `git log > out.txt` 写的是 UTF-16LE，
+ * 用 FileReader.readAsText 会按 UTF-8 解码成乱码，所以这里读原始字节自己判断。
+ */
+function decodeFileBuffer(buf) {
+  if (!buf) return '';
+  var u8 = new Uint8Array(buf);
+  /* utf16BytesToString 已把字节合成 16 位码元，不能再过一遍 utf16ToString */
+  if (u8.length >= 2 && u8[0] === 0xFF && u8[1] === 0xFE) {
+    return utf16BytesToString(u8, 2, true);
+  }
+  if (u8.length >= 2 && u8[0] === 0xFE && u8[1] === 0xFF) {
+    return utf16BytesToString(u8, 2, false);
+  }
+  if (u8.length >= 3 && u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) {
+    return utf8Decode(u8, 3);
+  }
+  /* 无 BOM 但含 NUL：按 UTF-16LE 处理 */
+  var probe = Math.min(u8.length, 2000);
+  var nul = 0;
+  for (var i = 0; i < probe; i++) if (u8[i] === 0) nul++;
+  if (nul > 3 && nul * 6 > probe) {
+    return utf16BytesToString(u8, 0, true);
+  }
+  return utf8Decode(u8, 0);
+}
+
+/** 字节数组按 UTF-16 读成码元字符串（每个 JS 字符 = 一个 16 位码元） */
+function utf16BytesToString(u8, start, littleEndian) {
+  var s = '';
+  for (var i = start; i + 1 < u8.length; i += 2) {
+    var a = u8[i], b = u8[i + 1];
+    s += String.fromCharCode(littleEndian ? (b << 8) | a : (a << 8) | b);
+  }
+  return s;
+}
+
+/** 字节数组按 UTF-8 解码 */
+function utf8Decode(u8, start) {
+  try {
+    if (typeof TextDecoder === 'undefined') {
+      return String.fromCharCode.apply(null, u8.subarray(start, start + 20000));
+    }
+    return new TextDecoder('utf-8').decode(u8.subarray(start));
+  } catch (e) {
+    return String.fromCharCode.apply(null, u8.subarray(start, start + 20000));
+  }
+}
+
+/**
  * 解析 git log 文本。
  * 支持：自定义 format（三种时间精度）、git 默认格式、--oneline、--numstat、续行、CRLF。
  * 返回 { records, truncated }
@@ -1594,11 +1644,11 @@ function bind() {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      ta.value = String(rd.result || '');
+      ta.value = decodeFileBuffer(rd.result);
       setMsg('parseMsg', 'ok', '已读入 ' + f.name + '，点「生成我的年轮」。');
     };
     rd.onerror = function () { setMsg('parseMsg', 'err', '文件读取失败，请改用粘贴。'); };
-    rd.readAsText(f);
+    rd.readAsArrayBuffer(f);
   });
 
   /* 病历本独立输入 */
@@ -1824,6 +1874,31 @@ function runSelfTest() {
     var r = parseGitLog(u16);
     eq(r.records.length, 1);
     eq(r.records[0].subject, 'feat: x');
+    return true;
+  });
+  t('文件读取：UTF-16LE 字节被正确解码', function () {
+    /* 拖入的 .txt 若是 UTF-16LE（Windows 重定向产物），必须按 UTF-16 读 */
+    var s = 'a1b2c3d|2026-10-20 10:00:00|张三|feat: 中文提交\n1\t0\tsrc/a.js';
+    var bytes = [];
+    bytes.push(0xFF, 0xFE);
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      bytes.push(c & 0xFF, (c >> 8) & 0xFF);
+    }
+    var txt = decodeFileBuffer(new Uint8Array(bytes).buffer);
+    ok(txt.indexOf('张三') >= 0, '应含中文作者');
+    var r = parseGitLog(txt);
+    eq(r.records.length, 1);
+    eq(r.records[0].author, '张三');
+    eq(r.records[0].files[0], 'src/a.js');
+    return true;
+  });
+  t('文件读取：UTF-8 文件正常读取', function () {
+    var s = 'a1b2c3d|2026-10-20 10:00:00|Alice|feat: x';
+    var bytes = [];
+    for (var i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i));
+    var txt = decodeFileBuffer(new Uint8Array(bytes).buffer);
+    eq(parseGitLog(txt).records.length, 1);
     return true;
   });
   t('解析：CRLF 换行', function () {
@@ -2090,6 +2165,9 @@ else boot();
 if (typeof globalThis !== 'undefined') {
   globalThis.__CTR__ = {
     parseGitLog: parseGitLog,
+    normalizeInputText: normalizeInputText,
+    decodeFileBuffer: decodeFileBuffer,
+    decodeOctalPath: decodeOctalPath,
     computeStats: computeStats,
     levelFor: levelFor,
     builderIndex: builderIndex,

@@ -58,7 +58,10 @@
       }
 
       if (dataUrl) {
-        return fetch(dataUrl).then(function (r) { return r.text(); }).then(function (txt) {
+        /* 用 fetch 拿 ArrayBuffer，自己按 BOM 判断编码
+           （Windows 的 `>` 重定向写的是 UTF-16，fetch().text() 会按 UTF-8 解码成乱码） */
+        return fetch(dataUrl).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+          var txt = S.decodeFileBuffer(buf);
           var recs = S.parseGitLog(txt).records;
           var st = S.computeStats(recs);
           var dg = S.diagnoseRecords(recs);
