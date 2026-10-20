@@ -62,6 +62,27 @@ pre.cmd{
   margin:0 0 10px;padding:12px 14px;background:#060A0F;border:1px solid #1A2C3A;border-radius:10px;
   font-size:12.5px;line-height:1.7;color:#B9D6C8;overflow-x:auto;white-space:pre;
 }
+pre.cmd.clickable{cursor:pointer;position:relative;padding-right:96px}
+pre.cmd.wrap{white-space:pre-wrap;word-break:break-all}
+pre.cmd.wrap.clickable{padding-right:96px}
+pre.cmd.clickable::after{
+  content:"点击复制";position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:11.5px;color:var(--muted);border:1px solid #22384C;border-radius:6px;padding:3px 8px;
+}
+pre.cmd.clickable:hover{border-color:var(--accent)}
+pre.cmd.clickable:hover::after{color:var(--accent);border-color:var(--accent)}
+ol.steps{margin:0 0 12px;padding-left:20px;color:var(--fg);font-size:13.5px;line-height:1.85}
+ol.steps li{margin-bottom:8px}
+ol.steps strong{color:var(--accent)}
+kbd{
+  background:#0D1720;border:1px solid #22384C;border-bottom-width:2px;border-radius:5px;
+  padding:1px 6px;font-size:12px;font-family:Consolas,monospace;color:var(--fg);
+}
+code{
+  background:#0D1720;border:1px solid #1A2C3A;border-radius:5px;
+  padding:1px 6px;font-size:12.5px;font-family:Consolas,monospace;color:#9FE8C4;
+}
+.hint code{color:#9FE8C4}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
 button{
   font:600 13.5px/1 "Microsoft YaHei","PingFang SC",sans-serif;
@@ -184,6 +205,25 @@ tr.fail td{background:#2A1414}
         <button class="btn-ghost btn-sm" id="btnDownloadSample">下载示例 .txt</button>
         <button class="btn-ghost btn-sm" id="btnClear">清空</button>
       </div>
+
+      <details class="manual" id="whereHelp">
+        <summary>不知道仓库目录在哪 / 不会用命令行？点这里 →</summary>
+        <div class="body">
+          <p class="hint" style="margin-top:0">命令要在<strong>你的项目文件夹里</strong>执行——也就是那个里面有 <code>.git</code> 文件夹的目录。三步：</p>
+          <ol class="steps">
+            <li><strong>打开终端</strong>：按 <kbd>Win</kbd> 键，输入 <code>powershell</code> 回车（Mac 是「终端」，Linux 是 <code>Ctrl+Alt+T</code>）</li>
+            <li><strong>找到你的项目</strong>：最省事的办法是<strong>在终端里直接问</strong>，把下面这条粘进去（Windows / PowerShell 用），它会把你电脑上所有 git 仓库列出来：
+              <pre class="cmd" id="findCmd">Get-ChildItem -Path "$env:USERPROFILE","D:\" -Directory -Recurse -Depth 3 -Force -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName '.git') } | Select-Object -ExpandProperty FullName</pre>
+            </li>
+            <li><strong>进目录再跑</strong>：把上一步找到的路径套进下面这句（路径里有空格或中文，一定要加引号），再粘贴上面那条 git log 命令：
+              <pre class="cmd" id="cdCmd">cd "D:\你的项目目录"</pre>
+            </li>
+          </ol>
+          <p class="hint">Mac / Linux 的找法：<code>find ~ -name .git -type d -maxdepth 4 2>/dev/null</code></p>
+          <p class="hint">小技巧：也可以在项目文件夹的地址栏里直接输入 <code>powershell</code> 回车，终端就会<strong>自动开在这个文件夹里</strong>，连 <code>cd</code> 都省了。</p>
+          <p class="hint">贴不进去也没关系——在项目文件夹里按住 <kbd>Shift</kbd> + 鼠标右键 →「在此处打开 PowerShell 窗口」，然后右键终端全选复制就行。</p>
+        </div>
+      </details>
 
       <label class="fld" for="logInput">粘贴 git log 输出（也可以把 .txt 文件拖进来）</label>
       <textarea id="logInput" spellcheck="false" placeholder="在此粘贴 git log 输出&#10;&#10;支持：&#10;· git log --pretty=format:'%h|%ad|%an|%s' 的三种时间精度&#10;· git log 默认输出（直接复制终端内容）&#10;· git log --oneline&#10;· 带 --numstat 的增删行与文件统计&#10;· 二进制文件与重命名"></textarea>
@@ -1479,6 +1519,22 @@ function bind() {
       navigator.clipboard.writeText(txt).then(ok, function () { fallbackCopy(txt); ok(); });
     } else { fallbackCopy(txt); ok(); }
   };
+
+  /* 「不知道仓库在哪」里的两条命令块：点击即复制 */
+  ['findCmd', 'cdCmd'].forEach(function (id) {
+    var el = $(id);
+    if (!el) return;
+    el.classList.add('clickable');
+    if (id === 'findCmd') el.classList.add('wrap');
+    el.title = '点击复制这条命令';
+    el.onclick = function () {
+      var txt = el.textContent;
+      var ok = function () { setMsg('parseMsg', 'ok', '已复制：' + (id === 'findCmd' ? '查找仓库命令' : '进入目录命令')); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(ok, function () { fallbackCopy(txt); ok(); });
+      } else { fallbackCopy(txt); ok(); }
+    };
+  });
 
   $('btnClear').onclick = function () {
     $('logInput').value = '';
