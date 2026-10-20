@@ -320,6 +320,9 @@ tr.fail td{background:#2A1414}
 
 <footer class="foot">
   代码年轮 · Code Tree Rings ｜ 为 TRAE 社区 1024Builder 作品秀而建 ｜ 单文件 · 零依赖 · 数据不出浏览器
+  <div class="btnrow" style="justify-content:center;margin-top:12px">
+    <button class="btn-ghost btn-sm" id="btnDownloadSelf">下载本页 HTML（离线双击即用）</button>
+  </div>
 </footer>
 </div>
 
@@ -1610,6 +1613,36 @@ function bind() {
     setMsg('parseMsg', 'ok', '已下载 sample-gitlog.txt，可以拖回输入框试试「拖入文件」这条路。');
   };
 
+  $('btnDownloadSelf').onclick = function () {
+    /* 优先取原始文件内容；file:// 下 XHR 失败则用当前 DOM 还原 */
+    function save(text) {
+      var blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'code-tree-rings.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      setMsg('parseMsg', 'ok', '已下载 code-tree-rings.html，双击即可离线打开。');
+    }
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', location.pathname || 'index.html', true);
+      xhr.onload = function () {
+        if (xhr.status === 0 || xhr.status === 200) {
+          if (xhr.responseText && xhr.responseText.indexOf('<canvas') >= 0) { save(xhr.responseText); return; }
+        }
+        save(selfHtmlSnapshot());
+      };
+      xhr.onerror = function () { save(selfHtmlSnapshot()); };
+      xhr.send();
+    } catch (e) {
+      save(selfHtmlSnapshot());
+    }
+  };
+
   $('btnGen').onclick = generate;
 
   $('btnRepaint').onclick = paint;
@@ -1705,6 +1738,28 @@ function bind() {
     renderStats(); renderDiag(); renderChips(); paint();
     setMsg('parseMsg', 'ok', '已用手动数据生成（提交数 ' + cnt + '，段位 Lv.' + levelFor(cnt) + '）。');
   };
+}
+
+/**
+ * 从当前 DOM 还原一份干净的 HTML 源码（用于「下载本页」在 file:// 下的降级）。
+ * 清掉运行期产生的动态内容：自检面板的表格行、canvas 的位图内容、表单里用户填的值。
+ */
+function selfHtmlSnapshot() {
+  var doc = document.documentElement.cloneNode(true);
+  /* 自检面板：清空断言表格 */
+  var stBody = doc.querySelector('#stBody');
+  if (stBody) stBody.innerHTML = '';
+  var stSum = doc.querySelector('#stSummary');
+  if (stSum) stSum.textContent = '';
+  /* canvas 的位图内容不带进源码 */
+  var cvs = doc.querySelectorAll('canvas');
+  for (var i = 0; i < cvs.length; i++) {
+    if (cvs[i].id === 'posterCanvas') cvs[i].removeAttribute('data-rendered');
+  }
+  /* 用户填的内容不必带走 */
+  var ta = doc.querySelector('#logInput');
+  if (ta) ta.textContent = '';
+  return '<!DOCTYPE html>\n' + doc.outerHTML;
 }
 
 function fallbackCopy(txt) {

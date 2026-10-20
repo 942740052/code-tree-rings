@@ -109,11 +109,14 @@ index.html?selftest=1
 |---|---|
 | `index.html` | 作品本体，单文件、零依赖 |
 | `README.md` | 本文件 |
+| `SUBMIT.md` | **投稿文案模板**（标题 / 正文 / 标签三段式，可直接复制） |
+| `post-title.txt` / `post-body.md` / `post-tag.txt` | 从 `SUBMIT.md` 提取出的三段可复制内容（`node extract-post.js`） |
+| `preview-post.js` / `post-preview.html` | 离线渲染投稿正文，校验排版与图片链接 |
 | `verify.js` | 命令行自检，49 条断言（`node verify.js`） |
 | `e2e.js` | 端到端测试，6 场景 32 项（`node e2e.js`） |
 | `check-my-log.js` | 用真实仓库数据校验解析链路 |
 | `fetch-my-log.ps1` | 受限网络下经 GitHub API 还原 `git log --numstat` 输出 |
-| `my-gitlog.txt` | 真实仓库数据样本（Photo-collection，3 提交 / 232 文件） |
+| `my-gitlog.txt` | 真实仓库数据样本（企业知识库Agent，15 提交 / 219 文件） |
 | `poster.html` | 海报渲染页，供无头浏览器批量出图 |
 | `shoot-posters.ps1` | 批量生成海报 |
 | `check-posters.ps1` | 海报非空校验（逐像素采样，防导出空白） |
